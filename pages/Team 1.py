@@ -34,6 +34,6 @@ fig.update_layout(
     yaxis_title='euro',
 )
 
-st.title("📈 Dummy Plotly Chart Example")
+st.title("📈 AIC portfolio value")
 
 st.plotly_chart(fig, use_container_width=True)
