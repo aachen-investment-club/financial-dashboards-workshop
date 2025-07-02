@@ -36,7 +36,7 @@ Before starting with this part of the workshop, make sure that you have already 
 
 
 
-#### The workflow
+#### Warmup and the commit graph
 Git works on **repositories**, which are managed under the hidden folder `.git` in your project's root folder. You can think of a repository as an environment that holds all your local code versions. 
 
 First, we will start by creating your own branch. You will be using this branch for the rest of the tutorial. If you run the command
@@ -73,12 +73,26 @@ git switch <firstname>_<lastname>
 ```
 make sure to use the same name you used before! You should see that your changes are back. What did we just do? First, when we switched to main, we changed the HEAD pointer from the latest commit in your branch, to the lastest commit in the main branch. Then, when switching back to your branch, you move the HEAD pointer back to the latest commit of your branch. 
 
-HEAD? what is that? This might be a bit abstract. But, if you understood what is to come, you managed to understand git's most basic behavior. Imagine that your each version of your whole codebase is represented by a node in a graph. Looking back into what we have done so far, your graph should like kind of like this: 
+HEAD? what is that? This might be a bit abstract. But, if you are able to understand what is to come, you managed to understand git's most basic behavior. Imagine that your each version of your whole codebase is represented by a node in a graph. Looking back into what we have done so far, your graph should like kind of like this: 
+![graph 1](./images/graph%201.png)
+Each node in the graph represents some commit (version) of your code. The last commit you made is at the top, and the HEAD is pointing to that commit (this way, you can see the current changes). 
 
-this is a change
+Do you remember when you switched to main? Well, what happened in the background, was that the HEAD pointer was moved to the latest commit of the main branch (the blue nodes): 
+![graph 2](./images/graph%202.png)
+Therefore, you could not see your latest changes any more, because you successfully walked back to a previous commit (aka you went back to a previous checkpoint). 
+
+One last comment, HEAD therefore is the responsible of "picking" which version you are currently in, so one of git's most important tasks is learning how to traverse this graph.
 
 
+#### Merging branches and resolving conflicts
+You are almost there. Make sure that you are currently in the main branch. i.e. run `git branch` or directly run `git switch main`. Now, we are going to repeat what we did before: 
+1. create a new branch, this time call it "coworker_branch".
+2. switch to this branch.  
+3. go to the `./pages/example.py` file and edit the `NAME` variable again. **MAKE SURE TO USE A DIFFERENT NAME**.
+4. run `git add .` and `git commit -m "some change made by a coworker"`
+If you did everything correctly, your tree should now look like this: 
 
+    
 
 
 ## Baseline Plotly Project
