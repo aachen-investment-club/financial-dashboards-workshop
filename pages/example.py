@@ -7,6 +7,7 @@ import pandas as pd
 NAME= "value2"
 
 
+
 st.set_page_config(page_title=NAME)
 
 st.title(NAME)

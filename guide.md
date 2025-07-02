@@ -104,9 +104,11 @@ So, first switch to the target branch, and then run the merge command (therefore
 git switch <your-branch>
 git merge <coworkers-branch>
 ```
+if you see a "merge conflict notification", don't panic! this is intended! Basically, whenever git tries to merge two codebases, it checks file by file if there are any redefinitions, conflicting names, etc. If that is the case, conflict resolution is necessary before finalizing the merge. 
 
-
-
+Open the file `./pages/example.py`. You should see the following: 
+![conflict](./images/conflict.jpeg)
+Simply delete the lines that you dont want to have, and done! Conflict solved. Now run `git add .` and `git commit -m "first conflict resolved` to finalize the merge. 
 
 ## Baseline Plotly Project
 
