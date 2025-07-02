@@ -12,6 +12,7 @@
 2. clone the repo
 3. create the virtual environment
 4. run pip install...
+5. setup remote access to github (https tutorial)
 
 
 
@@ -91,8 +92,20 @@ You are almost there. Make sure that you are currently in the main branch. i.e. 
 3. go to the `./pages/example.py` file and edit the `NAME` variable again. **MAKE SURE TO USE A DIFFERENT NAME**.
 4. run `git add .` and `git commit -m "some change made by a coworker"`
 If you did everything correctly, your tree should now look like this: 
+![graph 3](./images/graph%203.png)
+Since you created the new branch while standing on the older commit, the tree is split here. 
 
-    
+Now imagine you are in the following setting. The green branch was actually created (remotely) by one of your coworkers. You would like to synchronize your changes with the ones made by your coworker. Therefore, you would like to *merge* the green and the orange nodes (your version with your coworker's version). This is the main functionality of the `merge` command. Think of it like this: 
+
+“I’m on the branch I want to bring changes into, and I merge in the changes from another branch.”
+
+So, first switch to the target branch, and then run the merge command (therefore, you would like to replace your changes by the ones made by your coworker): 
+```sh
+git switch <your-branch>
+git merge <coworkers-branch>
+```
+
+
 
 
 ## Baseline Plotly Project
