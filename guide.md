@@ -1,5 +1,6 @@
 # Guide
 
+![AIC](./images/aic_logo.jpg)
 
 
 ## What we expect from your system
@@ -8,12 +9,25 @@
 
 
 ## Setup
-1. install git on your machine
-2. clone the repo
-3. create the virtual environment
-4. run pip install...
-5. setup remote access to github (https tutorial)
-6. vs code plugins (particularly git, maybe also md visualizer)
+1. install git on your machine. visit [git's website](https://git-scm.com/downloads)
+2. install vscode. We recommend this editor [website](https://code.visualstudio.com/)
+3. setup remote access to github (https tutorial)
+4. clone the repo: run this once git is installed in your system:
+```sh
+git clone https://github.com/aachen-investment-club/financial-dashboards-workshop.git
+```
+5. create a virtual environment inside of your project: 
+```sh
+cd into your project
+python -m venv venv
+```
+6. install the requirements: 
+```sh
+pip install -r requirements.txt
+```
+7. we recommend to install the following vscode extensions: 
+- git graph 
+- Markdown preview enhanced
 
 
 
@@ -22,7 +36,7 @@
 Let's start with a few classics:  
 
 ![git meme 1](./images/git_meme.png)
-![git meme 1](./images/commenting_out.jpg)
+![git meme 2](./images/commenting_out.jpg)
 
 We all might relate to at least one of the two situations before, no shame on that, nobody starts 
 out programming already knowing git. So... why is git so great? 
@@ -162,32 +176,11 @@ Never develop (code) in the main branch. The main branch represents the stable v
 
 
 ## pull request
-If you should never code in main,... how do I merge main with a development branch in my *REMOTE* repository? For this you use *pull requests*. Whenever github sees that `main` is outdated with respect to other online branches, it will prompt you to do a pull request. The workflow is the following: 
+
+![pull request](./images/pull_request.webp)
+If you should never code in main,... how do you merge main with a development branch in my *REMOTE* repository? For this you use *pull requests*. Whenever github sees that `main` is outdated with respect to other online branches, it will prompt you to do a pull request. The workflow is the following: 
 1. first, you create the pull request, indicating to the repositor owner that you "feel ready to merge with main"
 2. the admins/repo owners will then look at your code, and hopefully, merge with main.
-
-
-
-
-
-
-### Instructions for the owner of the selected dashboard: 
-
-
-
-Here the important commands: 
-this allows you to synchronize your last commit with online repo. 
-
-If you want to pull a specific branch, such as a collaborator's branch, run 
-```sh
-git pull origin <branch_name>
-```
-note that if you have never done this before, 
-
-
-
-
-
 
 
 
