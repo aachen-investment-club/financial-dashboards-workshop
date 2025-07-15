@@ -6,8 +6,8 @@ import pandas as pd
 from dataloader import load_data
 
 ### Base Project
-st.set_page_config(page_title="Interactive Stock Viewer")
-st.title("📈 Interactive S&P 500 Stocks Viewer")
+st.set_page_config(page_title="Stock Viewer")
+st.title("📈 S&P 500 Stocks Viewer")
 st.write("Select a stock ticker from the list to view its price history.")
 
 # Load data
@@ -24,7 +24,7 @@ selected_ticker = st.selectbox(
 )
 
 # Filter data for selected ticker
-df_selected = df[[selected_ticker]].copy()
+df_selected = df[[selected_ticker]].copy().dropna()
 
 # Plot using Plotly
 fig = px.line(
