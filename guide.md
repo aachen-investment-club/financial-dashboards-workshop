@@ -4,35 +4,37 @@
 
 
 ## What we expect from your system
-- we assume that you have already installed python in your device. 
+- We assume that you have already installed python in your device, and pip has already been set up properly. 
 
 
 
 ## Setup
-1. install git on your machine. visit [git's website](https://git-scm.com/downloads)
-2. install vscode. We recommend this editor [website](https://code.visualstudio.com/)
-3. setup remote access to github (https tutorial)
-
-4. clone the repo: run this once git is installed in your system:
+1. Install git on your machine. visit [git's website](https://git-scm.com/downloads)
+2. Install vscode. We recommend this editor [website](https://code.visualstudio.com/)
+3. Setup remote access to github (skip this if you have done this in the past): 
+- Create a Github account
+- Setup your user name and email (make sure that both match the ones you use on Github)
+```sh
+git config --global user.name "<your username>"
+git config --global user.email "<your email>"
+```
+4. Clone the repo: run this once git is installed in your system:
 ```sh
 git clone https://github.com/aachen-investment-club/financial-dashboards-workshop.git
 ```
-
-5. create a virtual environment inside of your project: 
+5. Create a virtual environment inside of your project: 
 ```sh
 python -m venv venv
 ```
-
-6. start the virtual environment with
+6. Start the virtual environment with
 ```sh
 .\venv\Scripts\activate
 ```
-
 7. install the requirements: 
 ```sh
 pip install -r requirements.txt
 ```
-7. we recommend to install the following vscode extensions:
+7. We recommend to install the following vscode extensions:
 - git graph
 - markdown preview enhanced
 
