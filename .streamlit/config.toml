@@ -1,0 +1,11 @@
+[server]
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+
+[ui]
+hideTopBar = true
