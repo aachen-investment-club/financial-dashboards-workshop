@@ -2,4 +2,6 @@ pandas
 plotly
 numpy
 streamlit
-dotenv
+dotenv  # for reading env file
+matplotlib
+nbformat  # must be >=4.2.0 for plotly

@@ -13,7 +13,7 @@ s3_csv_url = os.environ.get("S3_CSV_URL")
 if not s3_csv_url:
     raise RuntimeError("S3_CSV_URL is not set in the environment.")
 
-def load_data(cols=None):
+def load_data():
     """
     Load data from a CSV file, cache the result, and return the selected columns.
 
@@ -26,13 +26,20 @@ def load_data(cols=None):
     global _cached_data
 
     if _cached_data is None:
-        df = pd.read_csv(s3_csv_url, parse_dates=['Date'])
+
+        # if possible load from local file, otherwise load from S3
+        if os.path.exists('data\sp500.csv'):
+            df = pd.read_csv('data\sp500.csv', parse_dates=['Date'])
+        else:
+            df = pd.read_csv(s3_csv_url, parse_dates=['Date'])
+        
+        # process dataset to usable form
         df = df.pivot_table(index='Date', columns='Ticker', values='Price Close')
+        df.ffill() 
+
+        # save in cache
         _cached_data = df
     else:
         df = _cached_data
-
-    if cols:
-        df = df[cols]
 
     return df
