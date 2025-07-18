@@ -53,7 +53,7 @@ From this section on, we will focus on dashboard creation. You will first start 
 
 ## Stock viewer
 
-Go to the file `./pages/Stock Viewer.py`. You will be working here for the rest of this task.
+Go to the file [../pages/base-project.py](../pages/base-project.py). You will be working here for the rest of this task.
 
 We already took care of creating a dataset for you. The `load_data` function was implemented for this, which is import at the top of the file. 
 
