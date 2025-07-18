@@ -28,6 +28,7 @@ def load_data(cols=None):
     if _cached_data is None:
         df = pd.read_csv(s3_csv_url, parse_dates=['Date'])
         df = df.pivot_table(index='Date', columns='Ticker', values='Price Close')
+        df = df.ffill() 
         _cached_data = df
     else:
         df = _cached_data
