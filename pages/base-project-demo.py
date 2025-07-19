@@ -13,15 +13,16 @@ from dataloader import load_data
 st.set_page_config(page_title="Base Project Demo", layout="wide")
 st.title("Base Project Demo")
 
+# ----------------------------
+# Load data
+df = load_data(name='sp500_close')
+meta_df = load_data(name='sp500_meta')
 
 # ----------------------------
 # Stock Browser
 
 st.header(":chart_with_upwards_trend: Stock Browser", divider="gray")
 st.write("Select a stock ticker from the list to view its price history.")
-
-# Load data
-df = load_data(name='sp500_close')
 
 # Create scrollable list of tickers
 all_tickers = df.columns.tolist()
@@ -30,6 +31,21 @@ selected_ticker = st.selectbox(
     all_tickers,
     index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers else 0,
 )
+
+# Display Meta Information
+ticker_meta = meta_df[selected_ticker]
+
+if not ticker_meta.empty:
+    st.write(
+        f"""
+        **Company Name:** {ticker_meta.loc['Company Common Name']}  
+        **Sector:** {ticker_meta.loc['TRBC Business Sector Name']}  
+        **Exchange Name:** {ticker_meta.loc['Exchange Name']}  
+        """
+    )
+else:
+    st.warning("No meta information available for this ticker.")
+
 
 # Filter data for selected ticker
 df_selected = df[[selected_ticker]].copy().dropna()
@@ -84,11 +100,10 @@ if selected_tickers:
 
 
     # ----------------------------
-    # Pie Chart of Allocations
-
+    # Pie Charts: Allocation & Industry
     st.subheader("Portfolio Allocation Summary")
 
-    # Create allocation data (including cash)
+    # --- Left Pie Chart: Portfolio Weights ---
     allocation_labels = list(weights.keys()) + ["Cash"]
     allocation_values = list(weights.values()) + [cash_weight]
 
@@ -100,14 +115,39 @@ if selected_tickers:
     )
     fig_alloc.update_traces(textinfo='percent+label')
 
-    st.plotly_chart(fig_alloc, use_container_width=False)
+    # --- Right Pie Chart: Industry Weights ---
+
+    # Map tickers to industries via meta_df
+    industries = []
+    for ticker in weights.keys():
+        industry = meta_df[ticker].loc["TRBC Business Sector Name"]
+        industries.append(industry)
+
+    # Aggregate industry weights
+    industry_weight = {}
+    for ticker, industry in zip(weights.keys(), industries):
+        industry_weight[industry] = industry_weight.get(industry, 0) + weights[ticker]
+
+    # Add cash as its own category
+    industry_weight["Cash"] = cash_weight
+
+    fig_industry = px.pie(
+        names=list(industry_weight.keys()),
+        values=list(industry_weight.values()),
+        title="Industry Allocation",
+        hole=0.4,
+    )
+    fig_industry.update_traces(textinfo='percent+label')
 
 
-    # ----------------------------
-    # Industry Allocation
-    st.subheader("Industry Allocation")
-    st.write("Industry allocation is not implemented yet.")
-    # TODO: Implement industry allocation if data is available
+    # --- Display side-by-side ---
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.plotly_chart(fig_alloc, use_container_width=True)
+
+    with col2:
+        st.plotly_chart(fig_industry, use_container_width=True)
 
 
     
