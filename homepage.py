@@ -13,4 +13,6 @@ Welcome to the Dahsboards Workshop!
 - checkout the guide in ...
 """)
 
-_ = load_data()
+# preload datasets in cache
+_ = load_data(name='sp500_close')
+_ = load_data(name='sp500_meta')

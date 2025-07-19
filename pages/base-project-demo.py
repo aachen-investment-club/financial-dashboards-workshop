@@ -21,7 +21,7 @@ st.header(":chart_with_upwards_trend: Stock Browser", divider="gray")
 st.write("Select a stock ticker from the list to view its price history.")
 
 # Load data
-df = load_data()
+df = load_data(name='sp500_close')
 
 # Create scrollable list of tickers
 all_tickers = df.columns.tolist()

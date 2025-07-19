@@ -1,6 +1,6 @@
 # Financial Dashboards Workshop
 
-First time user? Complete the [setup guide](guide.md).
+First time user? Complete the [setup guide](guide/1_setup.md).
 
 ## Running the Website
 
