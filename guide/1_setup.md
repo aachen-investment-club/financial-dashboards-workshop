@@ -33,7 +33,8 @@ python -m venv venv
 
 6. Start the virtual environment with
 ```sh
-.\venv\Scripts\activate
+.\venv\Scripts\activate #windows 
+source venv/bin/activate  #macos
 ```
 
 7. Install the python requirements with 

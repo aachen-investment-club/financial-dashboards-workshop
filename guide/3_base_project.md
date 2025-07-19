@@ -3,9 +3,9 @@
 # Base Project
 
 ## Sharing your code with others
-So, it is finally time to merge your base projects. Assuming you have a group of at least two people, decide whose dashboards you would like to use from now on. All of you will be using this dashboard as a basis. Do the following: 
+So, it is finally time to merge your base projects. Assuming you have a group of at least three people, decide whose dashboards you would like to use from now on. All of you will be using this dashboard as a basis. Do the following: 
 
-0. Owner: Dont forget to run `git add .` and `git commit`!   
+0. Owner: Don't forget to run `git add .` and `git commit`!   
 1. The owner of the selected version must push their code to GitHub. 
 ```sh 
 git push -u origin <your-branch-name>
@@ -47,7 +47,7 @@ If you should never code in main,... how do you merge main with a development br
 From this section on, we will focus on dashboard creation. You will first start working on three small projects: 
 1. A stock viewer that allows you to pick specific stocks from the S&P500 and graph them. 
 2. A portfolio builder, which you can use to simulate some stock trades.
-3. (optional) If you feel that the two previous tasks were to simple, we have a challenge for you! **pending**
+3. (optional) If you feel that the two previous tasks were to simple, we have a challenge for you!
 
 
 
