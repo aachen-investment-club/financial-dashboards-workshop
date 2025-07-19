@@ -301,6 +301,3 @@ Again, paste the following lines of codes inside the if statement from before:
 
     st.table(metrics_table)
 ```
-
-
-## Challenge 

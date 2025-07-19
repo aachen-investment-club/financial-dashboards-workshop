@@ -52,7 +52,6 @@ st.plotly_chart(fig, use_container_width=True)
 
 # ----------------------------
 # Portfolio Construction
-
 st.header(":bar_chart: Portfolio Builder", divider="gray")
 st.write("Select tickers, assign weights, and visualize your portfolio performance.")
 
@@ -103,37 +102,67 @@ if selected_tickers:
 
     st.plotly_chart(fig_alloc, use_container_width=False)
 
+
     # ----------------------------
     # Industry Allocation
-
     st.subheader("Industry Allocation")
     st.write("Industry allocation is not implemented yet.")
     # TODO: Implement industry allocation if data is available
 
 
+    
     # ----------------------------
-    # Portfolio NAV & SPY
+    # Date Range Selection for Portfolio Evaluation
+    st.subheader("Select Evaluation Period")
+
+    min_date = df.index.min().date()
+    max_date = df.index.max().date()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input(
+            "Start Date",
+            value=min_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+    with col2:
+        end_date = st.date_input(
+            "End Date",
+            value=max_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+
+    if start_date >= end_date:
+        st.error("End date must be after start date.")
+        st.stop()
+        
+
+
+    # ----------------------------
+    # Compute Net Asse Value 
     st.subheader("Portfolio Performance")
 
     df_selected = df[selected_tickers].copy()
+    df_selected = df_selected.loc[start_date:end_date]
     df_selected = df_selected.dropna(how="any")
 
     df_norm = df_selected / df_selected.iloc[0]
     nav = sum(df_norm[ticker] * (weights[ticker] / 100.0) for ticker in selected_tickers)
     nav += cash_weight / 100.0
-    portfolio_df = pd.DataFrame({"Portfolio Value": nav})
+    nav_df = pd.DataFrame({"Portfolio": nav})
 
     # SPY
-    spy_data = df[["SPY"]].loc[portfolio_df.index[0]:].dropna()
+    spy_data = df[["SPY"]].loc[start_date:end_date].dropna()  # Ensure SPY data matches the portfolio dates
     spy_norm = spy_data / spy_data.iloc[0]
-    portfolio_df = portfolio_df.join(spy_norm, how="inner")
+    nav_df = nav_df.join(spy_norm, how="inner")
 
-    # ----------------------------
     # Daily Returns
-    daily_returns = portfolio_df["Portfolio Value"].pct_change().dropna()
+    portfolio_returns_daily = nav_df["Portfolio"].pct_change().dropna()
 
     # ----------------------------
-    # Combined Figure with Shared X
+    # Display Portfolio vs SPY Benchmark
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
@@ -144,24 +173,24 @@ if selected_tickers:
 
     # Line Plot Portfolio + SPY
     fig.add_trace(go.Scatter(
-        x=portfolio_df.index,
-        y=portfolio_df["Portfolio Value"],
+        x=nav_df.index,
+        y=nav_df["Portfolio"],
         mode='lines',
         name='Your Portfolio',
     ), row=1, col=1)
 
     fig.add_trace(go.Scatter(
-        x=portfolio_df.index,
-        y=portfolio_df["SPY"],
+        x=nav_df.index,
+        y=nav_df["SPY"],
         mode='lines',
         name='SPY Benchmark',
     ), row=1, col=1)
 
     # Daily Returns Bar
     fig.add_trace(go.Bar(
-        x=daily_returns.index,
-        y=daily_returns.values,
-        marker_color=np.where(daily_returns.values >= 0, 'green', 'red'),
+        x=portfolio_returns_daily.index,
+        y=portfolio_returns_daily.values,
+        marker_color=np.where(portfolio_returns_daily.values >= 0, 'green', 'red'),
         name='Daily Returns'
     ), row=2, col=1)
 
@@ -180,82 +209,77 @@ if selected_tickers:
 
     # ----------------------------
     # Compute Metrics
+
+    def compute_holding_metrics(nav_df: pd.DataFrame) -> dict:
+        """
+        Compute holding metrics for the portfolio DataFrame.
+        Returns a dictionary with start date, end date, holding period, and annualized return.
+        """
+        start_date = nav_df.index.min().date()
+        end_date = nav_df.index.max().date()
+        holding_days = (end_date - start_date).days
+        holding_years = holding_days / 365.25
+
+        holding_metrics = {
+            "Start Date" : f"{start_date}",
+            "End Date" : f"{end_date}",
+            "Holding Period (days)" :f"{holding_days} days",
+            "Holding Period (years)" : f"~{holding_years:.2f} years"
+        }
+
+        return holding_metrics
     
-    # Start, End, Holding Period
-    start_date = portfolio_df.index.min().date()
-    end_date = portfolio_df.index.max().date()
-    holding_days = (end_date - start_date).days
-    holding_years = holding_days / 365.25
+    
+    def compute_return_metrics(nav_df: pd.DataFrame) -> dict:
+        
+        # Comupute returns
+        returns_daily = nav_df.pct_change().dropna()
+        cumulative_return = nav_df.iloc[-1] - 1.0
 
-    # Cumulative returns
-    cumulative_return = portfolio_df["Portfolio Value"].iloc[-1] - 1.0
-    spy_cumulative_return = portfolio_df["Portfolio Value"].iloc[-1] - 1.0
+        # Annualized return (CAGR)
+        years = (nav_df.index[-1] - nav_df.index[0]).days / 365.25
+        annual_return = (nav_df.iloc[-1]) ** (1 / years) - 1
 
-    # Annualized return (CAGR)
-    years = (portfolio_df.index[-1] - portfolio_df.index[0]).days / 365.25
-    annual_return = (portfolio_df["Portfolio Value"].iloc[-1]) ** (1 / years) - 1
+        # Annualized volatility
+        annual_volatility = returns_daily.std() * np.sqrt(252)
 
-    # Annualized volatility
-    annual_volatility = daily_returns.std() * np.sqrt(252)
+        # Maximum Drawdown TODO: check if this is correct
+        cumulative_max = nav_df.cummax()
+        drawdown = (nav_df / cumulative_max) - 1.0
+        max_drawdown = drawdown.min()
 
-    # Maximum Drawdown TODO: check if this is correct
-    cumulative_max = portfolio_df["Portfolio Value"].cummax()
-    drawdown = (portfolio_df["Portfolio Value"] / cumulative_max) - 1.0
-    max_drawdown = drawdown.min()
+        # Sharpe Ratio (risk-free rate = 0%)
+        sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else np.nan
 
-    # Sharpe Ratio (risk-free rate = 0%)
-    sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else np.nan
+
+        return_metrics = {
+            "Cumulative Return" : f"{cumulative_return:.2f}x",
+            "CAGR" :  f"{annual_return * 100:.2f}%",  # Compound Annual Growth Rate
+            "Annualized Volatility" :  f"{annual_volatility * 100:.2f}%",
+            "Maximum Drawdown": f"{max_drawdown * 100:.2f}%",
+            "Sharpe Ratio" : f"{sharpe_ratio:.2f}"
+        }           
+                         
+        return return_metrics
 
 
     # ----------------------------
     # Display Portfolio Stats
 
 
-    st.subheader("Holding Info")
-
-    stats_table = pd.DataFrame({
-        "Metric": [
-            "Start Date",
-            "End Date",
-            "Holding Period (days)",
-            "Holding Period (years)",
-        ],
-        "Value": [
-            f"{start_date}",
-            f"{end_date}",
-            f"{holding_days}",
-            f"~{holding_years:.2f}",
-        ]
-    })
-
-    st.table(stats_table)
-
+    st.subheader("Holding Metrics")
+    holding_metrics = pd.DataFrame([compute_holding_metrics(nav_df)], index=['Value']).T
+    st.table(holding_metrics)
 
 
     st.subheader("Risk and Return Metrics")
 
-    metrics_table = pd.DataFrame({
-        "Metric": [
-            "Annualized Return (CAGR)",
-            "Annualized Volatility",
-            "Maximum Drawdown",
-            "Sharpe Ratio"
-        ],
-        "Portfolio": [
-            f"{annual_return * 100:.2f}%",
-            f"{annual_volatility * 100:.2f}%",
-            f"{max_drawdown * 100:.2f}%",
-            f"{sharpe_ratio:.2f}"
-        ],
-        "SPY Benchmark": [
-            f"{annual_return * 100:.2f}%",
-            f"{annual_volatility * 100:.2f}%",
-            f"{max_drawdown * 100:.2f}%",
-            f"{sharpe_ratio:.2f}"
-        ]
-    })
+    # compute metrics for portfolio and SPY
+    portfolio_return_metrics = compute_return_metrics(nav_df["Portfolio"])
+    spy_return_metrics = compute_return_metrics(nav_df["SPY"])
 
-    st.table(metrics_table)
+    metrics_df = pd.DataFrame([portfolio_return_metrics, spy_return_metrics], index=['Portfolio', 'SPY Benchmark'])
+    st.table(metrics_df.T)
 
 else:
     st.info("Please select at least one ticker to begin building your portfolio.")
