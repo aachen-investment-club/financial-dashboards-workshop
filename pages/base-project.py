@@ -24,27 +24,43 @@ meta_df = load_data(name='sp500_meta')
 st.header(":chart_with_upwards_trend: Stock Comparison", divider="gray")
 st.write("Select one or more stock tickers to compare their price history.")
 
-# Initialize ticker count
-if "ticker_count" not in st.session_state:
-    st.session_state.ticker_count = 1
+# Initialize stock list in session state
+if "stock_list" not in st.session_state:
+    st.session_state.stock_list = [0]  # Start with one stock (ID 0)
+if "next_stock_id" not in st.session_state:
+    st.session_state.next_stock_id = 1
 
-# Display dynamic selectboxes
 all_tickers = df.columns.tolist()
 selected_tickers = []
 
-for i in range(st.session_state.ticker_count):
-    ticker = st.selectbox(
-        f"Stock {i + 1}",
-        all_tickers,
-        index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers and i == 0 else 0,
-        key=f"stock_select_{i}",
-    )
-    if ticker not in selected_tickers:
-        selected_tickers.append(ticker)
+# Display each stock with remove button
+for stock_id in st.session_state.stock_list:
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        ticker = st.selectbox(
+            f"Stock {stock_id + 1}",
+            all_tickers,
+            index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers and stock_id == 0 else 0,
+            key=f"stock_select_{stock_id}",
+        )
+        if ticker not in selected_tickers:
+            selected_tickers.append(ticker)
+    
+    with col2:
+        # Add vertical spacing to align button with selectbox
+        st.markdown("<br>", unsafe_allow_html=True)
+        # Only show remove button if there's more than one stock
+        if len(st.session_state.stock_list) > 1:
+            if st.button("🗑️", key=f"remove_{stock_id}", help="Remove this stock"):
+                st.session_state.stock_list.remove(stock_id)
+                st.rerun()
 
 # Button to add another stock
 if st.button("➕ Add another stock"):
-    st.session_state.ticker_count += 1
+    st.session_state.stock_list.append(st.session_state.next_stock_id)
+    st.session_state.next_stock_id += 1
+    st.rerun()
 
 # Show Meta Information for all selected tickers
 st.subheader("Company Information")
