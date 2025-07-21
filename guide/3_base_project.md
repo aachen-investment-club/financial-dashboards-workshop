@@ -1,73 +1,41 @@
 ![AIC](../images/aic_banner.png)
 
-# Base Project
+# 3) Base Project: Portfolio Builder
 
-## Sharing your code with others
-So, it is finally time to merge your base projects. Assuming you have a group of at least three people, decide whose dashboards you would like to use from now on. All of you will be using this dashboard as a basis. Do the following: 
+From this section on, we will focus on dashboard creation. First, you will work on the base project alone. This will be portfolio builder tool, which you can use to simulate how certain allocations from single stocks historically performed against the S&P 500 index.
 
-0. Owner: Don't forget to run `git add .` and `git commit`!   
-1. The owner of the selected version must push their code to GitHub. 
-```sh 
-git push -u origin <your-branch-name>
-```
-Note that when doing this for the first time, i.e. when the branch has not been backed up with Github, this command is necessary. After this, you can simply use `git push`.
-2. Now, your collaborators can download your code. For this, they need to run: 
-```sh
-git fetch origin
-git checkout <owner-branch-name>
-git pull origin <owner-branch-name> 
-```
-this is also necessary when pulling a branch for the first time. After the first time, it is enough to run `git pull` to synchronize with the current stand. Note that running `git pull` **might lead** to conflicts, hence resolution might be necessary!
+The goal of this section is to introduce you to building dashboards with streamlit & plotly and further provide an example use case for git. Therefore at the end of this section you will be assigned to a team and practice merging all of your branches into one. In this section you are not expected to show creativity, just be quick in understanding the code. In the final merge step you will most likely encounter some merge conflicts and we will use it as a practice to resolve them.
 
-## Workflow when working with others
-One last thing, before you start working on your own: there exists a typical workflow when working with others. Here we assume that you and your collaborators have a copy of the same branch in your respective local machines. Here we list a few important standards/ good practices:  
+Follow these instructions to build your base project: 
+1. Paste a single code block.
+2. Read the code, try to understand it.
+2. Save your file (or turn on auto-save).
+3. Refresh your website and try to spot the changes; associate them with your code.
 
-First of all, *BEFORE WRITING ANY CODE* always run `git pull`. This way you ensure to have the latest version of the code and avoid conflict resolution. 
+## Dataset & Dataloader
+Go to the file [../pages/base-project.py](../pages/base-project.py). You will work here for the rest of this task.
 
-After you are done writing your code, and fully sure it works as intended, run the usual commands to sync with the remote repo:  
-```sh
-git add . 
-git commit -m "some descriptive message summarizing your changes" 
-git push
-```
+We already took care of curating the dataset for you. The `load_data` function was implemented for this, which is imported at the top of your file from [dataloader.py](../dataloader.py).
 
-Never develop (code) in the main branch. The main branch represents the stable version of your code, therefore, only add new features to it once you are fully sure everything works. Therefore, always create a development branch for your new feature, then test it online, and then, once you are sure, merge with main.
+**Important Reminder**
+You need to create the ``.env`` file as described in the [setup guide](../guide/1_setup.md) to access our datasets.
+
+Once you start the app the dataloader will first download the datasets in the ``data`` directory and store it inside a cached variable.
+
+We provide you with following datasets:
+- ``sp500_close.csv`` contains close prices of all S&P 500 stocks, recent delistings excluded, and the SPDR S&P 500 ETF Trust with symbol ``SPY`` from 2000-01-03 until 2025-07-18
+- ``sp500_meta.csv`` includes following meta data for all stocks: Company Common Name, TRBC Business Sector Name, Exchange Name
 
 
-## pull requests
+## Stock Browser
 
-![pull request](../images/pull_request.webp)
-If you should never code in main,... how do you merge main with a development branch in my *REMOTE* repository? For this you use *pull requests*. Whenever github sees that `main` is outdated with respect to other online branches, it will prompt you to do a pull request. The workflow is the following: 
-1. first, you create the pull request, indicating to the repositor owner that you "feel ready to merge with main"
-2. the admins/repo owners will then look at your code, and hopefully, merge with main.
+Before starting with the portfolio builder, lets write a little tool to explore our dataset.
 
 
-# Dashboards
-
-From this section on, we will focus on dashboard creation. You will first start working on three small projects: 
-1. A stock viewer that allows you to pick specific stocks from the S&P500 and graph them. 
-2. A portfolio builder, which you can use to simulate some stock trades.
-3. (optional) If you feel that the two previous tasks were to simple, we have a challenge for you!
-
-
-
-## Stock viewer
-
-Go to the file [../pages/base-project.py](../pages/base-project.py). You will be working here for the rest of this task.
-
-We already took care of creating a dataset for you. The `load_data` function was implemented for this, which is import at the top of the file. 
-
-Make sure to always: 
-1. paste a single code block.
-2. read the code, try to understand it.
-2. save your file.
-3. check your website and try to spot the changes; associate them with your code.
 
 First, name the site: 
 ```py
-st.set_page_config(page_title="Stock Viewer")
-st.title("📈 S&P 500 Stocks Viewer")
-st.write("Select a stock ticker from the list to view its price history.")
+
 ```
 Next, load the data and create a select box. This component
 will list out all the available stocks in the S&P500, and 
@@ -301,3 +269,43 @@ Again, paste the following lines of codes inside the if statement from before:
 
     st.table(metrics_table)
 ```
+
+
+## Finally! Let's share your code with others.
+Now it's time to build teams and merge your base projects with others. Assuming you have a group of at least three people, decide whose dashboards you would like to use from now on. Now you will merge your branches into one. Do the following: 
+
+0. Owner: Don't forget to run `git add .` and `git commit`!   
+1. The owner of the selected version must push their code to GitHub. 
+```sh 
+git push -u origin <your-branch-name>
+```
+Note that when doing this for the first time, i.e. when the branch has not been backed up with Github, this command is necessary. After this, you can simply use `git push`.
+2. Now, your collaborators can download your code. For this, they need to run: 
+```sh
+git fetch origin
+git checkout <owner-branch-name>
+git pull origin <owner-branch-name> 
+```
+this is also necessary when pulling a branch for the first time. After the first time, it is enough to run `git pull` to synchronize with the current stand. Note that running `git pull` **might lead** to conflicts, hence resolution might be necessary!
+
+## Workflow when working with others
+One last thing, before you start working on your own: there exists a typical workflow when working with others. Here we assume that you and your collaborators have a copy of the same branch in your respective local machines. Here we list a few important standards/ good practices:  
+
+First of all, *BEFORE WRITING ANY CODE* always run `git pull`. This way you ensure to have the latest version of the code and avoid conflict resolution. 
+
+After you are done writing your code, and fully sure it works as intended, run the usual commands to sync with the remote repo:  
+```sh
+git add . 
+git commit -m "some descriptive message summarizing your changes" 
+git push
+```
+
+Never develop (code) in the main branch. The main branch represents the stable version of your code, therefore, only add new features to it once you are fully sure everything works. Therefore, always create a development branch for your new feature, then test it online, and then, once you are sure, merge with main.
+
+
+## Pull requests
+
+![pull request](../images/pull_request.webp)
+If you should never code in main,... how do you merge main with a development branch in my *REMOTE* repository? For this you use *pull requests*. Whenever github sees that `main` is outdated with respect to other online branches, it will prompt you to do a pull request. The workflow is the following: 
+1. first, you create the pull request, indicating to the repositor owner that you "feel ready to merge with main"
+2. the admins/repo owners will then look at your code, and hopefully, merge with main.

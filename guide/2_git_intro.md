@@ -1,7 +1,7 @@
 
 ![AIC](../images/aic_banner.png)
 
-# Quick Intro to ``git``
+# 2) Quick Intro to ``git``
 
 Let's start with a few classics:  
 
