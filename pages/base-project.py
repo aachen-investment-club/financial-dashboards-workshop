@@ -11,8 +11,8 @@ from dataloader import load_data
 
 # ----------------------------
 # Page Setup
-st.set_page_config(page_title="Base Project", layout="wide")
-st.title("Base Project")
+st.set_page_config(page_title="Base Project Demo", layout="wide")
+st.title("Base Project Demo")
 
 # ----------------------------
 # Load dataset
@@ -20,44 +20,61 @@ df = load_data(name='sp500_close')
 meta_df = load_data(name='sp500_meta')
 
 # ----------------------------
-# Stock Browser
-# Page title
-st.header(":chart_with_upwards_trend: Stock Browser", divider="gray")
-st.write("Select a stock ticker from the list to view its price history.")
+# Stock Comparison
+st.header(":chart_with_upwards_trend: Stock Comparison", divider="gray")
+st.write("Select one or more stock tickers to compare their price history.")
 
-# Create scrollable list of tickers
+# Initialize ticker count
+if "ticker_count" not in st.session_state:
+    st.session_state.ticker_count = 1
+
+# Display dynamic selectboxes
 all_tickers = df.columns.tolist()
-selected_ticker = st.selectbox(
-    "Choose a stock ticker",
-    all_tickers,
-    index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers else 0,
-)
-# Display Meta Information
-ticker_meta = meta_df[selected_ticker]
+selected_tickers = []
 
-if not ticker_meta.empty:
-    st.write(
-        f"""
-        **Company Name:** {ticker_meta.loc['Company Common Name']}  
-        **Sector:** {ticker_meta.loc['TRBC Business Sector Name']}  
-        **Exchange Name:** {ticker_meta.loc['Exchange Name']}  
-        """
+for i in range(st.session_state.ticker_count):
+    ticker = st.selectbox(
+        f"Stock {i + 1}",
+        all_tickers,
+        index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers and i == 0 else 0,
+        key=f"stock_select_{i}",
     )
-else:
-    st.warning("No meta information available for this ticker.")
+    if ticker not in selected_tickers:
+        selected_tickers.append(ticker)
 
-# Filter close price data for selected ticker
-df_selected = df[[selected_ticker]].copy().dropna()
+# Button to add another stock
+if st.button("➕ Add another stock"):
+    st.session_state.ticker_count += 1
 
-# Create figure using Plotly
+# Show Meta Information for all selected tickers
+st.subheader("Company Information")
+for ticker in selected_tickers:
+    ticker_meta = meta_df[ticker]
+    if not ticker_meta.empty:
+        st.markdown(
+            f"""
+            **{ticker}**  
+            - Company: {ticker_meta.loc['Company Common Name']}  
+            - Sector: {ticker_meta.loc['TRBC Business Sector Name']}  
+            - Exchange: {ticker_meta.loc['Exchange Name']}  
+            """
+        )
+    else:
+        st.warning(f"No meta info for {ticker}")
+
+# Plot the selected tickers
+df_selected = df[selected_tickers].copy().dropna()
+
 fig = px.line(
     df_selected,
-    title=f"{selected_ticker} Stock Price",
+    title="Selected Stock Prices",
     labels={"value": "Close Price (USD)", "Date": "Date"},
 )
 
-# Plot figure on our dashboard
 st.plotly_chart(fig, use_container_width=True)
+
+# Display Meta Information
+ticker_meta = meta_df[selected_tickers]
 
 # ----------------------------
 # Portfolio Builder
@@ -73,26 +90,40 @@ selected_tickers = st.multiselect(
 )
 
 weights = {}
-total_weight = 0.0
+cash_weight = 0.0
 
 if selected_tickers:
     st.subheader("Set Allocations")
-    cols = st.columns(len(selected_tickers))
-    for idx, ticker in enumerate(selected_tickers):
-        with cols[idx]:
-            weight = st.number_input(
-                f"{ticker} (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{ticker}_weight"
-            )
-            weights[ticker] = weight
 
-    total_weight = sum(weights.values())
-    cash_weight = 100.0 - total_weight
+    equal_weights = st.checkbox("Rebalance equally", value=True)
 
-    if total_weight > 100:
-        st.error("⚠️ Total stock allocation exceeds 100%. Adjust your weights.")
-        st.stop()
+    if equal_weights:
+        # Equal allocation to all selected tickers
+        weight_per_ticker = 100.0 / len(selected_tickers)
+        weights = {ticker: weight_per_ticker for ticker in selected_tickers}
+        total_weight = sum(weights.values())
+        cash_weight = 100.0 - total_weight
+        st.info(f"Each ticker is assigned {weight_per_ticker:.2f}% of the portfolio.")
+    else:
+        # Manual input
+        cols = st.columns(len(selected_tickers))
+        for idx, ticker in enumerate(selected_tickers):
+            with cols[idx]:
+                weight = st.number_input(
+                    f"{ticker} (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{ticker}_weight"
+                )
+                weights[ticker] = weight
 
-    # --- Paste all following code blocks inside here  --- #
+        total_weight = sum(weights.values())
+        cash_weight = 100.0 - total_weight
+
+        if total_weight > 100:
+            st.error("⚠️ Total stock allocation exceeds 100%. Adjust your weights.")
+            st.stop()
+
+
+    # ----------------------------
+    # Pie Charts: Allocation & Industry
     st.subheader("Portfolio Allocation Summary")
 
     # --- Left Pie Chart: Portfolio Weights ---
@@ -106,7 +137,8 @@ if selected_tickers:
         hole=0.4,
     )
     fig_alloc.update_traces(textinfo='percent+label')
-        # --- Right Pie Chart: Industry Weights ---
+
+    # --- Right Pie Chart: Industry Weights ---
 
     # Map tickers to industries via meta_df
     industries = []
@@ -130,6 +162,7 @@ if selected_tickers:
     )
     fig_industry.update_traces(textinfo='percent+label')
 
+
     # --- Display side-by-side ---
     col1, col2 = st.columns(2)
 
@@ -139,12 +172,10 @@ if selected_tickers:
     with col2:
         st.plotly_chart(fig_industry, use_container_width=True)
 
-    # ---------------------------------------------------- #
+
     
-
-
     # ----------------------------
-    # Date Range Selection
+    # Date Range Selection for Portfolio Evaluation
     st.subheader("Select Evaluation Period")
 
     min_date = df.index.min().date()
@@ -169,33 +200,32 @@ if selected_tickers:
     if start_date >= end_date:
         st.error("End date must be after start date.")
         st.stop()
+        
+
 
     # ----------------------------
-    # Compute Net Asse Value Curve
+    # Compute Net Asse Value 
     st.subheader("Portfolio Performance")
 
-    # Filter only selected tickers and the selected date range 
     df_selected = df[selected_tickers].copy()
     df_selected = df_selected.loc[start_date:end_date]
     df_selected = df_selected.dropna(how="any")
 
-    # Compute Portfolio NAV
     df_norm = df_selected / df_selected.iloc[0]
     nav = sum(df_norm[ticker] * (weights[ticker] / 100.0) for ticker in selected_tickers)
     nav += cash_weight / 100.0
     nav_df = pd.DataFrame({"Portfolio": nav})
 
-    # Compute SPY NAV
-    spy_data = df[["SPY"]].loc[start_date:end_date].dropna()
+    # SPY
+    spy_data = df[["SPY"]].loc[start_date:end_date].dropna()  # Ensure SPY data matches the portfolio dates
     spy_norm = spy_data / spy_data.iloc[0]
     nav_df = nav_df.join(spy_norm, how="inner")
 
     # Daily Returns
     portfolio_returns_daily = nav_df["Portfolio"].pct_change().dropna()
-    
 
     # ----------------------------
-    # Plot NAV of Portfolio vs SPY
+    # Display Portfolio vs SPY Benchmark
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
@@ -237,25 +267,15 @@ if selected_tickers:
     )
 
     st.plotly_chart(fig, use_container_width=True)
-    
+
+
+
     # ----------------------------
-    # Display Portfolio Metrics
-    st.subheader("Holding Period")
-
-    # compute variables
-    start_date = nav_df.index.min().date()
-    end_date = nav_df.index.max().date()
-    holding_days = (end_date - start_date).days
-    holding_years = holding_days / 365.25 
-
-    # print out variables
-    st.write(f"**Start Date:** {start_date}")
-    st.write(f"**End Date:** {end_date}")
-    st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
-
+    # Compute Metrics
+    
     def compute_metrics(nav_df: pd.DataFrame) -> dict:
-                
-       # Comupute returns
+        
+        # Comupute returns
         returns_daily = nav_df.pct_change().dropna()
         cumulative_return = nav_df.iloc[-1] - 1.0
 
@@ -269,15 +289,33 @@ if selected_tickers:
         # Sharpe Ratio (risk-free rate = 0%)
         sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else np.nan
 
-        # Prepare metrics in dict format
+
         return_metrics = {
             "Cumulative Return" : f"{cumulative_return:.2f}x",
             "CAGR" :  f"{annual_return * 100:.2f}%",  # Compound Annual Growth Rate
             "Annualized Volatility" :  f"{annual_volatility * 100:.2f}%",
             "Sharpe Ratio" : f"{sharpe_ratio:.2f}"
         }           
-                            
+                         
         return return_metrics
+
+
+    # ----------------------------
+    # Display Portfolio Stats
+    
+    st.subheader("Holding Metrics")
+
+    # compute variables
+    start_date = nav_df.index.min().date()
+    end_date = nav_df.index.max().date()
+    holding_days = (end_date - start_date).days
+    holding_years = holding_days / 365.25 
+
+    # print out variables
+    st.write(f"**Start Date:** {start_date}")
+    st.write(f"**End Date:** {end_date}")
+    st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
+
 
     st.subheader("Risk and Return Metrics")
 
@@ -287,6 +325,6 @@ if selected_tickers:
 
     metrics_df = pd.DataFrame([portfolio_return_metrics, spy_return_metrics], index=['Portfolio', 'SPY Benchmark'])
     st.table(metrics_df.T)
-    
+
 else:
     st.info("Please select at least one ticker to begin building your portfolio.")
