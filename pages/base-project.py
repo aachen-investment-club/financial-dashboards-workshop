@@ -8,6 +8,23 @@ import numpy as np
 # own imports
 from dataloader import load_data
 
+def compute_metrics(nav_df: pd.DataFrame) -> dict:
+    
+    # Comupute metrics
+    returns_daily = nav_df.pct_change().dropna()
+    
+    # Prepare metrics in dict format
+    return_metrics = {
+        "Cumulative Return" : f"{cumulative_return:.2f}x",
+        "CAGR" :  f"{annual_return * 100:.2f}%",  # Compound Annual Growth Rate
+        "Annualized Volatility" :  f"{annual_volatility * 100:.2f}%",
+        "Sharpe Ratio" : f"{sharpe_ratio:.2f}"
+    }           
+                        
+    return return_metrics
+
+
+
 
 # ----------------------------
 # Page Setup
@@ -267,9 +284,19 @@ if selected_tickers:
 
 
 
+    st.subheader("Risk and Return Metrics")
+
+    # compute metrics for portfolio and SPY
+    portfolio_return_metrics = compute_metrics(nav_df["Portfolio"])
+    spy_return_metrics = compute_metrics(nav_df["SPY"])
+
+    metrics_df = pd.DataFrame([portfolio_return_metrics, spy_return_metrics], index=['Portfolio', 'SPY Benchmark'])
+    st.table(metrics_df.T)
+
 
 else:
     st.info("Please select at least one ticker to begin building your portfolio.")
+
 
 
 
