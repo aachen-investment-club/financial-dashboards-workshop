@@ -93,6 +93,225 @@ st.plotly_chart(fig, use_container_width=True)
 ticker_meta = meta_df[selected_tickers]
 
 # ----------------------------
+# Market Stress Indicator
+st.header(":warning: Market Stress Indicator", divider="red")
+st.write("Monitor market volatility and momentum to assess current stress levels.")
+
+def calculate_market_stress_indicator(spy_data, volatility_window=30, momentum_short=10, momentum_long=50):
+    """
+    Calculate Market Stress Indicator based on Rolling Volatility and Momentum
+    
+    Parameters:
+    - volatility_window: Rolling window for volatility calculation (days)
+    - momentum_short: Short-term momentum period (days)
+    - momentum_long: Long-term momentum period (days)
+    """
+    # Calculate daily returns
+    spy_returns = spy_data.pct_change().dropna()
+    
+    # 1. Rolling Volatility (annualized)
+    rolling_volatility = spy_returns.rolling(window=volatility_window).std() * np.sqrt(252) * 100
+    
+    # 2. Momentum Indicator (short MA vs long MA)
+    short_ma = spy_data.rolling(window=momentum_short).mean()
+    long_ma = spy_data.rolling(window=momentum_long).mean()
+    momentum_signal = (short_ma / long_ma - 1) * 100  # Percentage above/below long-term trend
+    
+    # 3. Volatility Percentile (relative to historical)
+    vol_percentile = rolling_volatility.rolling(window=252).rank(pct=True) * 100  # 1-year lookback
+    
+    # 4. Combined Stress Score (0-100, higher = more stress)
+    # Weight: 60% volatility percentile, 40% inverse momentum
+    stress_score = (vol_percentile * 0.6) + ((50 - momentum_signal.abs()) * 0.4)
+    stress_score = np.clip(stress_score, 0, 100)  # Ensure 0-100 range
+    
+    return {
+        'rolling_volatility': rolling_volatility,
+        'momentum_signal': momentum_signal,
+        'volatility_percentile': vol_percentile,
+        'stress_score': stress_score
+    }
+
+# Get SPY data for stress calculation
+spy_full_data = df[['SPY']].dropna()
+stress_indicators = calculate_market_stress_indicator(spy_full_data['SPY'])
+
+# Date range selector for stress indicator
+col1, col2 = st.columns(2)
+with col1:
+    stress_start_date = st.date_input(
+        "Stress Analysis Start Date",
+        value=spy_full_data.index.max() - pd.DateOffset(months=12),  # Default: last 12 months
+        min_value=spy_full_data.index.min().date(),
+        max_value=spy_full_data.index.max().date(),
+        key="stress_start"
+    )
+with col2:
+    stress_end_date = st.date_input(
+        "Stress Analysis End Date",
+        value=spy_full_data.index.max().date(),
+        min_value=spy_full_data.index.min().date(),
+        max_value=spy_full_data.index.max().date(),
+        key="stress_end"
+    )
+
+if stress_start_date >= stress_end_date:
+    st.error("End date must be after start date.")
+else:
+    # Filter data for selected period (filter each indicator separately to avoid index mismatch)
+    filtered_data = {}
+    for key, values in stress_indicators.items():
+        # Use datetime-based filtering instead of boolean mask to avoid length mismatches
+        mask = (values.index.date >= stress_start_date) & (values.index.date <= stress_end_date)
+        filtered_data[key] = values[mask].dropna()
+    
+    # Current stress level (most recent value)
+    current_stress = filtered_data['stress_score'].iloc[-1] if len(filtered_data['stress_score']) > 0 else 0
+    current_volatility = filtered_data['rolling_volatility'].iloc[-1] if len(filtered_data['rolling_volatility']) > 0 else 0
+    current_momentum = filtered_data['momentum_signal'].iloc[-1] if len(filtered_data['momentum_signal']) > 0 else 0
+    
+    # Stress level interpretation
+    if current_stress < 30:
+        stress_level = "🟢 Low Stress"
+        stress_color = "green"
+        stress_description = "Market is relatively calm with low volatility"
+    elif current_stress < 60:
+        stress_level = "🟡 Medium Stress"
+        stress_color = "orange" 
+        stress_description = "Market showing moderate volatility signals"
+    else:
+        stress_level = "🔴 High Stress"
+        stress_color = "red"
+        stress_description = "Market experiencing elevated volatility and stress"
+    
+    # Display current stress metrics
+    st.subheader("Current Market Conditions")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Stress Score",
+            f"{current_stress:.1f}/100",
+            help="Combined stress indicator (0=calm, 100=extreme stress)"
+        )
+        st.markdown(f"**{stress_level}**")
+        st.write(stress_description)
+    
+    with col2:
+        st.metric(
+            "Rolling Volatility",
+            f"{current_volatility:.1f}%",
+            help="30-day rolling volatility (annualized)"
+        )
+    
+    with col3:
+        momentum_color = "green" if current_momentum > 0 else "red"
+        st.metric(
+            "Momentum Signal",
+            f"{current_momentum:+.1f}%",
+            help="Short-term vs Long-term trend strength"
+        )
+    
+    with col4:
+        vol_percentile = filtered_data['volatility_percentile'].iloc[-1] if len(filtered_data['volatility_percentile']) > 0 else 0
+        st.metric(
+            "Vol. Percentile",
+            f"{vol_percentile:.0f}%",
+            help="Current volatility vs 1-year history"
+        )
+
+    # Stress indicator charts
+    st.subheader("Stress Indicator Timeline")
+    
+    # Create subplots
+    fig_stress = make_subplots(
+        rows=3, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.05,
+        row_heights=[0.4, 0.3, 0.3],
+        subplot_titles=(
+            "Market Stress Score (0-100)",
+            "Rolling 30-Day Volatility (%)",
+            "Momentum Signal (%)"
+        )
+    )
+    
+    # Stress score with color zones
+    fig_stress.add_trace(go.Scatter(
+        x=filtered_data['stress_score'].index,
+        y=filtered_data['stress_score'],
+        mode='lines',
+        name='Stress Score',
+        line=dict(color='purple', width=2),
+        fill='tonexty'
+    ), row=1, col=1)
+    
+    # Add stress level zones
+    fig_stress.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=1, col=1)
+    fig_stress.add_hline(y=60, line_dash="dash", line_color="orange", opacity=0.5, row=1, col=1)
+    
+    # Rolling Volatility
+    fig_stress.add_trace(go.Scatter(
+        x=filtered_data['rolling_volatility'].index,
+        y=filtered_data['rolling_volatility'],
+        mode='lines',
+        name='30-Day Volatility',
+        line=dict(color='red', width=1.5)
+    ), row=2, col=1)
+    
+    # Momentum Signal
+    fig_stress.add_trace(go.Scatter(
+        x=filtered_data['momentum_signal'].index,
+        y=filtered_data['momentum_signal'],
+        mode='lines',
+        name='Momentum',
+        line=dict(color='blue', width=1.5)
+    ), row=3, col=1)
+    
+    # Add zero line for momentum
+    fig_stress.add_hline(y=0, line_dash="solid", line_color="gray", opacity=0.3, row=3, col=1)
+    
+    fig_stress.update_layout(
+        height=700,
+        title_text="Market Stress Analysis Dashboard",
+        showlegend=False
+    )
+    
+    fig_stress.update_xaxes(title_text="Date", row=3, col=1)
+    fig_stress.update_yaxes(title_text="Stress Level", row=1, col=1, range=[0, 100])
+    fig_stress.update_yaxes(title_text="Volatility %", row=2, col=1)
+    fig_stress.update_yaxes(title_text="Momentum %", row=3, col=1)
+    
+    st.plotly_chart(fig_stress, use_container_width=True)
+    
+    # Interpretation guide
+    with st.expander("📖 How to Interpret the Market Stress Indicator"):
+        st.markdown("""
+        **Stress Score Components:**
+        
+        🎯 **Stress Score (0-100):**
+        - **0-30**: 🟢 Low stress - Market calm, good for risk-taking
+        - **30-60**: 🟡 Medium stress - Moderate caution advised  
+        - **60-100**: 🔴 High stress - High volatility, defensive positioning
+        
+        📈 **Rolling Volatility:**
+        - Measures 30-day price swings (annualized)
+        - Higher = more unpredictable price movements
+        - Normal range: 10-25% for SPY
+        
+        ⚡ **Momentum Signal:**
+        - Compares short-term (10-day) vs long-term (50-day) trend
+        - **Positive**: Short-term strength (bullish momentum)
+        - **Negative**: Short-term weakness (bearish momentum)
+        
+        💡 **Usage Tips:**
+        - High stress periods often present buying opportunities for long-term investors
+        - Consider reducing position sizes during high stress periods
+        - Use momentum signals to time entries/exits within your strategy
+        """)
+
+# ----------------------------
 # Portfolio Builder
 st.header(":bar_chart: Portfolio Builder", divider="gray")
 st.write("Select tickers, assign weights, and visualize your portfolio performance.")
