@@ -44,4 +44,25 @@ If you should never code in main,... how do you merge main with a development br
 
 ## Dashboard Ideas
 
-### 1. Leveraged ETF
+### Rule based Rebalancing for Portfolio
+
+### Leveraged ETFs
+
+### Market Stress Indicator
+- Rolling volatility / Momentum Based
+- Volatility Targeting: Rebalance portfolio to reach a target volatility
+
+### Pairs Trading
+- Find pairs of stocks that behave similar e.g. by conintegration test
+- Trade the spread between these two
+- More advanced: instead of single stocks find baskets that behave similar
+
+### Index Arbitrage with Market Factor Basket
+- I don't know if this works
+- Compute principal eigenvector of covariance matrix between each stock
+- Use weights as market factor portfolio to trade against the SPY
+
+### Model example derivatives
+- Variance Swap, Barrier Options, Black Scholes
+
+### Industry Factor Model
