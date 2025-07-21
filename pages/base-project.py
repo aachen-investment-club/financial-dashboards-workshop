@@ -12,7 +12,19 @@ def compute_metrics(nav_df: pd.DataFrame) -> dict:
     
     # Comupute metrics
     returns_daily = nav_df.pct_change().dropna()
+
+    cumulative_return = returns_daily["portfolio"].iloc[-1] / returns_daily["portfolio"].iloc[0] - 1
     
+    # Number of years based on actual time span
+    days = (returns_daily.index[-1] - returns_daily.index[0]).days
+    years = days / 365.25
+
+    annual_return = (returns_daily["portfolio"].iloc[-1] / returns_daily["portfolio"].iloc[0]) ** (1 / years) - 1
+    annual_volatility = returns_daily.std() * np.sqrt(252)
+    sharpe_ratio = returns_daily.mean() / returns_daily.std() * np.sqrt(252)
+
+
+
     # Prepare metrics in dict format
     return_metrics = {
         "Cumulative Return" : f"{cumulative_return:.2f}x",
@@ -282,7 +294,7 @@ if selected_tickers:
     st.write(f"**End Date:** {end_date}")
     st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
 
-
+    st.write (nav_df.head())
 
     st.subheader("Risk and Return Metrics")
 
@@ -293,6 +305,8 @@ if selected_tickers:
     metrics_df = pd.DataFrame([portfolio_return_metrics, spy_return_metrics], index=['Portfolio', 'SPY Benchmark'])
     st.table(metrics_df.T)
 
+
+    
 
 else:
     st.info("Please select at least one ticker to begin building your portfolio.")
