@@ -1,7 +1,9 @@
 ![AIC](../images/aic_banner.png)
 
 # 4) Team Project
-
+It's time for some collaborative work and a more challenging project! What you will do now:
+1. Merge your base project with your team members
+2. Free project work with your team
 
 ## Build Teams and merge your Base Projects
 It's time to build teams and merge your base projects with others. Assuming you have a group of at least three people, decide whose dashboards you would like to use from now on. Now you will merge your branches into one. Do the following: 
@@ -43,5 +45,33 @@ If you should never code in main,... how do you merge main with a development br
 2. the admins/repo owners will then look at your code, and hopefully, merge with main.
 
 ## Dashboard Ideas
+This is the creative part of this workshop! We want you to create custom dashboards as a team. The goal for you is to submit a pull request and we merge it into the main. After this workshop we will deploy all dashboards that got accepted on our Aachen Investment Club [website](https://www.aachen-investment-club.de/). Following topics are just very experimental project ideas. Feel free to use them or work some own ideas out. We recommend to start simple since we won't have a lot of time! :smiley:
 
-### 1. Leveraged ETF
+### Dynamic Portfolio Rebalancing
+- Instead of assigning fixed weights like in the base project you can add some rebalancing rule
+- For example monthly resetting to original weights
+
+### Leveraged ETFs
+- Compute returns for leveraged SPY
+
+### Market Stress Indicator
+- Rolling volatility / Momentum Based
+- Volatility Targeting: Rebalance portfolio to reach a target volatility
+
+### Pairs Trading
+- Find pairs of stocks that behave similar e.g. by conintegration test
+- Trade the spread between these two
+- More advanced: instead of single stocks find baskets that behave similar
+
+### Index Arbitrage with Market Factor Basket
+- Compute principal eigenvector of covariance matrix between each stock
+- Use weights as market factor portfolio to trade against the SPY
+
+### Model example derivatives
+- Variance Swap, Barrier Options, Black Scholes
+
+### Industry Factor Model
+- Compute and display industry factor returns
+
+### Rolling Beta
+- Regression of stock returns against SPY ETF
