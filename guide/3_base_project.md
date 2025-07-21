@@ -24,98 +24,106 @@ Once you start the app the dataloader will first download the datasets in the ``
 
 We provide you with following datasets:
 - ``sp500_close.csv`` contains close prices of all S&P 500 stocks, recent delistings excluded, and the SPDR S&P 500 ETF Trust with symbol ``SPY`` from 2000-01-03 until 2025-07-18
-- ``sp500_meta.csv`` includes following meta data for all stocks: Company Common Name, TRBC Business Sector Name, Exchange Name
+- ``sp500_meta.csv`` includes meta data for all stocks: Company Common Name, TRBC Business Sector Name, Exchange Name
 
 
 ## Stock Browser
 
 Before starting with the portfolio builder, lets write a little tool to explore our dataset.
 
-
-
-First, name the site: 
+Setup the page.
 ```py
-
+st.set_page_config(page_title="Base Project", layout="wide")
+st.title("Base Project")
 ```
-Next, load the data and create a select box. This component
-will list out all the available stocks in the S&P500, and 
-let you choose one of them for posterior visualization.
 
-The tickers contain the data corresponding to each stock. 
+Initialize the datasets.
 ```py
-# Load data
-df = load_data()
+df = load_data(name='sp500_close')
+meta_df = load_data(name='sp500_meta')
+```
 
-# Display all available tickers (i.e. DataFrame columns)
-all_tickers = df.columns.tolist()
+Next, we build the a select box for the stock browser. This component will list out all the available stocks in the S&P500, and let you choose one of them for visualization.
+
+```py
+# Page title
+st.header(":chart_with_upwards_trend: Stock Browser", divider="gray")
+st.write("Select a stock ticker from the list to view its price history.")
 
 # Create scrollable list of tickers
+all_tickers = df.columns.tolist()
 selected_ticker = st.selectbox(
     "Choose a stock ticker",
     all_tickers,
     index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers else 0,
 )
 ```
-Next, we do a preprocessing step: we filter the data such that we only have the selected ticker remaining: 
+
+Now the user input is stored in the `selected_ticker` variable. Let's search our meta dataset first and output as text
 ```py
-# Filter data for selected ticker
-df_selected = df[[selected_ticker]].copy().dropna()
+# Display Meta Information
+ticker_meta = meta_df[selected_ticker]
+
+if not ticker_meta.empty:
+    st.write(
+        f"""
+        **Company Name:** {ticker_meta.loc['Company Common Name']}  
+        **Sector:** {ticker_meta.loc['TRBC Business Sector Name']}  
+        **Exchange Name:** {ticker_meta.loc['Exchange Name']}  
+        """
+    )
+else:
+    st.warning("No meta information available for this ticker.")
 ```
 
-Finally, lets create a line plot! You can do this using: 
+Finally we create a plotly plot to display the close price of our `selected_ticker`.
+
 ```py
+# Filter close price data for selected ticker
+df_selected = df[[selected_ticker]].copy().dropna()
+
+# Create figure using Plotly
 fig = px.line(
     df_selected,
     title=f"{selected_ticker} Stock Price",
     labels={"value": "Close Price (USD)", "Date": "Date"},
 )
 
-# Update each axis label
-fig.update_layout(
-    xaxis_title="Date",
-    yaxis_title="Close Price (USD)",
-)
-```
-Finally, you can insert the chart in your site: 
-```py
-# Show plot
+# Plot figure on our dashboard
 st.plotly_chart(fig, use_container_width=True)
 ```
-Nicely done! If everything worked properly, you should have a working S&P50 stock viewer. Make sure to play around with it, before proceeding ;). 
+
+Well done! If everything worked properly, you should have a working S&P500 stock viewer. Make sure to play around with it, before proceeding ;). 
+
+
+
 ## Portfolio Builder
-Next, we proceed with a portfolio builder.
+Next, we proceed with the portfolio builder. Again setup the title.
 
-Again, start by naming your subpage: 
 ```py
-# ----------------------------
-# Page Setup
-st.set_page_config(page_title="Portfolio Builder")
-st.title("📊 Portfolio Builder")
+st.header(":bar_chart: Portfolio Builder", divider="gray")
 st.write("Select tickers, assign weights, and visualize your portfolio performance.")
-```
-Now, load the data and get all ticker names (i.e. all stock tickers). 
-```py
-# ----------------------------
-# Load Data
-df = load_data()
-all_tickers = df.columns.tolist()
-```
-Insert a **multiselect** component that allows you to select at least one stock. Note that this returns a list!
-```py
-# ----------------------------
-# Portfolio Construction
-st.header("Select Tickers")
 
+```
+
+### Multiselect for Ticker & Weights Input
+Insert a multiselect component that allows you to select at least one stock. Note that this returns a list of ``selected_tickers``!
+
+```py
+# Select component
+st.subheader("Select Tickers")
 selected_tickers = st.multiselect(
     "Choose the tickers you want in your portfolio:",
     all_tickers,
     default=["AAPL.OQ"] if "AAPL.OQ" in all_tickers else []
 )
 ```
-Next, we create a component to select the weights that you will assign to each stock:
+
+Next, we create a component to select the weights that you will assign to each stock.
+
 ```py
 if selected_tickers:
-    st.header("Set Allocations (%)")
+    st.subheader("Set Allocations")
     cols = st.columns(len(selected_tickers))
     for idx, ticker in enumerate(selected_tickers):
         with cols[idx]:
@@ -127,185 +135,246 @@ if selected_tickers:
     total_weight = sum(weights.values())
     cash_weight = 100.0 - total_weight
 
-    st.markdown("### 📋 Portfolio Allocation Summary")
-    for ticker, weight in weights.items():
-        st.write(f"- **{ticker}**: {weight:.1f}%")
-    st.write(f"- **Cash**: {cash_weight:.1f}%")
-
     if total_weight > 100:
         st.error("⚠️ Total stock allocation exceeds 100%. Adjust your weights.")
         st.stop()
+
+    # --- Paste all following code blocks inside here  --- #
+
+
+    # ---------------------------------------------------- #
+    
 else:
     st.info("Please select at least one ticker to begin building your portfolio.")
 ```
-Now, we would like to plot our portfolio's performance. 
-Still inside the inside if statement from the last block, paste the following (the outer-most if statement): 
-```py
-    # ----------------------------
-    # Portfolio Value Calculation
-    st.header("Portfolio Performance")
 
+### Allocation Pie Charts
+
+For nice visualization, lets plot our portfolio weights in two pie charts. 
+- The left pie chart dispays **portfolio weights**
+- And the right one **industry wieghts**
+
+Lets start with portfolio weights. Still inside the inside if statement from the last block, paste the following:
+
+```py
+    st.subheader("Portfolio Allocation Summary")
+
+    # --- Left Pie Chart: Portfolio Weights ---
+    allocation_labels = list(weights.keys()) + ["Cash"]
+    allocation_values = list(weights.values()) + [cash_weight]
+
+    fig_alloc = px.pie(
+        names=allocation_labels,
+        values=allocation_values,
+        title="Portfolio Allocation",
+        hole=0.4,
+    )
+    fig_alloc.update_traces(textinfo='percent+label')
+```
+
+And now the industry weights
+
+```py
+    # --- Right Pie Chart: Industry Weights ---
+
+    # Map tickers to industries via meta_df
+    industries = []
+    for ticker in weights.keys():
+        industry = meta_df[ticker].loc["TRBC Business Sector Name"]
+        industries.append(industry)
+
+    # Aggregate industry weights
+    industry_weight = {}
+    for ticker, industry in zip(weights.keys(), industries):
+        industry_weight[industry] = industry_weight.get(industry, 0) + weights[ticker]
+
+    # Add cash as its own category
+    industry_weight["Cash"] = cash_weight
+
+    fig_industry = px.pie(
+        names=list(industry_weight.keys()),
+        values=list(industry_weight.values()),
+        title="Industry Allocation",
+        hole=0.4,
+    )
+    fig_industry.update_traces(textinfo='percent+label')
+```
+
+Now we created both figures. Let's include them on our website.
+```py
+    # --- Display side-by-side ---
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.plotly_chart(fig_alloc, use_container_width=True)
+
+    with col2:
+        st.plotly_chart(fig_industry, use_container_width=True)
+```
+
+### Portfolio Performance
+
+Now its time for the serious stuff - plotting our portfolio's performance. Not to make it too easy for you, we want the flexibility to select the period on which the portfolio is evaluated. To conclude we require following steps:
+1. Date range selection for portfolio evaluation
+2. Compute net asset value (NAV) and daily portfolio returns
+3. Display portfolio NAV against the SPY Benchmark
+
+Start with step one **Data Range Selection**
+```py
+    st.subheader("Select Evaluation Period")
+
+    min_date = df.index.min().date()
+    max_date = df.index.max().date()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input(
+            "Start Date",
+            value=min_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+    with col2:
+        end_date = st.date_input(
+            "End Date",
+            value=max_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+
+    if start_date >= end_date:
+        st.error("End date must be after start date.")
+        st.stop()
+```
+
+Now step two **Net Asset Value & Daily Returns**. Note that we both norm the portfolio return and the SPY benchmark such that both curves start at 1 to make them comparable.
+
+```py
+    st.subheader("Portfolio Performance")
+
+    # Filter only selected tickers and the selected date range 
     df_selected = df[selected_tickers].copy()
+    df_selected = df_selected.loc[start_date:end_date]
     df_selected = df_selected.dropna(how="any")
 
-    # Normalize prices to 1 at start
+    # Compute Portfolio NAV
     df_norm = df_selected / df_selected.iloc[0]
+    nav = sum(df_norm[ticker] * (weights[ticker] / 100.0) for ticker in selected_tickers)
+    nav += cash_weight / 100.0
+    nav_df = pd.DataFrame({"Portfolio": nav})
 
-    # Weighted sum
-    portfolio = sum(df_norm[ticker] * (weights[ticker] / 100.0) for ticker in selected_tickers)
-    portfolio = portfolio * (1 - cash_weight / 100.0) + 1 * (cash_weight / 100.0)
+    # Compute SPY NAV
+    spy_data = df[["SPY"]].loc[start_date:end_date].dropna()
+    spy_norm = spy_data / spy_data.iloc[0]
+    nav_df = nav_df.join(spy_norm, how="inner")
 
-    portfolio_df = pd.DataFrame({"Portfolio Value": portfolio})
+    # Daily Returns
+    portfolio_returns_daily = nav_df["Portfolio"].pct_change().dropna()
+```
 
-    # Plot
-    fig = px.line(
-        portfolio_df,
-        title="Portfolio Value Over Time",
-        labels={"index": "Date", "value": "Portfolio Value"},
+Finally it's time for plotting. We will plot two subplots with a shared x axis. Just copy and paste and see how it looks like :)
+
+```py
+    fig = make_subplots(
+        rows=2, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.1,
+        row_heights=[0.7, 0.3],
+        subplot_titles=("Portfolio vs SPY Benchmark (normalized to 1.0)", "Daily Portfolio Returns")
     )
+
+    # Line Plot Portfolio + SPY
+    fig.add_trace(go.Scatter(
+        x=nav_df.index,
+        y=nav_df["Portfolio"],
+        mode='lines',
+        name='Your Portfolio',
+    ), row=1, col=1)
+
+    fig.add_trace(go.Scatter(
+        x=nav_df.index,
+        y=nav_df["SPY"],
+        mode='lines',
+        name='SPY Benchmark',
+    ), row=1, col=1)
+
+    # Daily Returns Bar
+    fig.add_trace(go.Bar(
+        x=portfolio_returns_daily.index,
+        y=portfolio_returns_daily.values,
+        marker_color=np.where(portfolio_returns_daily.values >= 0, 'green', 'red'),
+        name='Daily Returns'
+    ), row=2, col=1)
+
     fig.update_layout(
-        xaxis_title="Date",
-        yaxis_title="Portfolio Value (normalized to 1.0)",
+        height=800,
+        legend_title="Legend",
+        xaxis=dict(title="Date"),
+        yaxis=dict(title="Index"),
+        yaxis2=dict(title="Return (%)"),
+        showlegend=True,
     )
+
     st.plotly_chart(fig, use_container_width=True)
 ```
-We can also get some more information about our holding period. 
-Past the following within the same if statement as in the last step:
-```py
-    # ----------------------------
-    # Holding Period Information
-    st.header("Holding Period")
 
+Great work! We are nearly finished. But we wouldn't be good investors if we only look at charts and see the money printer goes brrrr :rocket::money_with_wings:
+
+As opposed to all the delusional day trading gurus, we are very sceptical and demand a more nuanced assessment. :detective:
+
+### Performance Metrics
+
+Let's start simple and look at our holding period. 
+```py
+    st.subheader("Holding Period")
+
+    # compute variables
     start_date = portfolio_df.index.min().date()
     end_date = portfolio_df.index.max().date()
     holding_days = (end_date - start_date).days
-    holding_years = holding_days / 365.25
+    holding_years = holding_days / 365.25 
 
+    # print out variables
     st.write(f"**Start Date:** {start_date}")
     st.write(f"**End Date:** {end_date}")
     st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
 ```
-How about some risk metrics? Lets evaluate the performance
- of you picks! For this, first we calculate them: (paste 
- them inside of the same if statement from before)
+
+But now for the interesting part we will create a function `compute_metrics` that takes a net asset value curve as input und returns a ready to plot dictionary. We will apply this function to both NAV curves (Portfolio & SPY) seperately.
+
+
 ```py
-
-    # ----------------------------
-    # Compute Risk Metrics
-
-    # Daily returns
-    daily_returns = portfolio_df["Portfolio Value"].pct_change().dropna()
-
-    # Cumulative return
-    cumulative_return = portfolio_df["Portfolio Value"].iloc[-1] - 1.0
-
-    # Annualized return (CAGR)
-    years = (portfolio_df.index[-1] - portfolio_df.index[0]).days / 365.25
-    annual_return = (portfolio_df["Portfolio Value"].iloc[-1]) ** (1 / years) - 1
-
-    # Annualized volatility
-    annual_volatility = daily_returns.std() * np.sqrt(252)
-
-    # Maximum Drawdown TODO: check if this is correct
-    cumulative_max = portfolio_df["Portfolio Value"].cummax()
-    drawdown = (portfolio_df["Portfolio Value"] / cumulative_max) - 1.0
-    max_drawdown = drawdown.min()
-
-    # Sharpe Ratio (risk-free rate = 0%)
-    sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else np.nan
+def compute_metrics(nav_df: pd.DataFrame) -> dict:
+    
+    # Comupute metrics
+    returns_daily = nav_df.pct_change().dropna()
+    
+    # Prepare metrics in dict format
+    return_metrics = {
+        "Cumulative Return" : f"{cumulative_return:.2f}x",
+        "CAGR" :  f"{annual_return * 100:.2f}%",  # Compound Annual Growth Rate
+        "Annualized Volatility" :  f"{annual_volatility * 100:.2f}%",
+        "Sharpe Ratio" : f"{sharpe_ratio:.2f}"
+    }           
+                        
+    return return_metrics
 ```
-Now, lets visualize them! We can plot our daily returns
-in a Bar chart, and our risk metrics in a tabular fashion. 
-Again, paste the following lines of codes inside the if statement from before: 
+
+OOPS! :dizzy_face: Something is missing. :sweat_smile: Somehow I forgot how to compute the risk metrics. Maybe I am not good enought to be a serious investor... :disappointed: But you have the potential! As long as you did not forget how to use your brain after all the copy and pasting.
+
+Compute the variables `cumulative_return`, `annual_return`, `annual_volatility`, and `sharpe_ratio` inside the function `compute_metrics`. Feel free to browse the internet for this step. Note you can assume a risk free rate of 0% for calculating the sharpe ratio.
+
+Once you are done, plot it with
+
 ```py
+    st.subheader("Risk and Return Metrics")
 
-    # ----------------------------
-    # Plot: Daily Returns Bar Chart
-    st.header("Daily Returns")
+    # compute metrics for portfolio and SPY
+    portfolio_return_metrics = compute_metrics(nav_df["Portfolio"])
+    spy_return_metrics = compute_metrics(nav_df["SPY"])
 
-    fig_returns = go.Figure()
-
-    fig_returns.add_trace(
-        go.Bar(
-            x=daily_returns.index,
-            y=daily_returns.values,
-            marker_color=np.where(daily_returns.values >= 0, 'green', 'red'),
-            name='Daily Return'
-        )
-    )
-
-    fig_returns.update_layout(
-        title="Daily Portfolio Returns",
-        xaxis_title="Date",
-        yaxis_title="Daily Return",
-        showlegend=False,
-        height=300,
-    )
-
-    st.plotly_chart(fig_returns, use_container_width=True)
-
-
-    # ----------------------------
-    # Display Metrics as Table
-    st.header("Portfolio Risk Metrics")
-
-
-    metrics_table = pd.DataFrame({
-        "Metric": [
-            "Cumulative Return",
-            "Annualized Return (CAGR)",
-            "Annualized Volatility",
-            "Maximum Drawdown",
-            "Sharpe Ratio"
-        ],
-        "Value": [
-            f"{cumulative_return * 100:.2f}%",
-            f"{annual_return * 100:.2f}%",
-            f"{annual_volatility * 100:.2f}%",
-            f"{max_drawdown * 100:.2f}%",
-            f"{sharpe_ratio:.2f}"
-        ]
-    })
-
-    st.table(metrics_table)
+    metrics_df = pd.DataFrame([portfolio_return_metrics, spy_return_metrics], index=['Portfolio', 'SPY Benchmark'])
+    st.table(metrics_df.T)
 ```
 
-
-## Finally! Let's share your code with others.
-Now it's time to build teams and merge your base projects with others. Assuming you have a group of at least three people, decide whose dashboards you would like to use from now on. Now you will merge your branches into one. Do the following: 
-
-0. Owner: Don't forget to run `git add .` and `git commit`!   
-1. The owner of the selected version must push their code to GitHub. 
-```sh 
-git push -u origin <your-branch-name>
-```
-Note that when doing this for the first time, i.e. when the branch has not been backed up with Github, this command is necessary. After this, you can simply use `git push`.
-2. Now, your collaborators can download your code. For this, they need to run: 
-```sh
-git fetch origin
-git checkout <owner-branch-name>
-git pull origin <owner-branch-name> 
-```
-this is also necessary when pulling a branch for the first time. After the first time, it is enough to run `git pull` to synchronize with the current stand. Note that running `git pull` **might lead** to conflicts, hence resolution might be necessary!
-
-## Workflow when working with others
-One last thing, before you start working on your own: there exists a typical workflow when working with others. Here we assume that you and your collaborators have a copy of the same branch in your respective local machines. Here we list a few important standards/ good practices:  
-
-First of all, *BEFORE WRITING ANY CODE* always run `git pull`. This way you ensure to have the latest version of the code and avoid conflict resolution. 
-
-After you are done writing your code, and fully sure it works as intended, run the usual commands to sync with the remote repo:  
-```sh
-git add . 
-git commit -m "some descriptive message summarizing your changes" 
-git push
-```
-
-Never develop (code) in the main branch. The main branch represents the stable version of your code, therefore, only add new features to it once you are fully sure everything works. Therefore, always create a development branch for your new feature, then test it online, and then, once you are sure, merge with main.
-
-
-## Pull requests
-
-![pull request](../images/pull_request.webp)
-If you should never code in main,... how do you merge main with a development branch in my *REMOTE* repository? For this you use *pull requests*. Whenever github sees that `main` is outdated with respect to other online branches, it will prompt you to do a pull request. The workflow is the following: 
-1. first, you create the pull request, indicating to the repositor owner that you "feel ready to merge with main"
-2. the admins/repo owners will then look at your code, and hopefully, merge with main.
+Congratulations you build your own Portfolio Builder! :blush:

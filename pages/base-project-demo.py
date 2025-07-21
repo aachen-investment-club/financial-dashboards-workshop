@@ -57,20 +57,16 @@ fig = px.line(
     labels={"value": "Close Price (USD)", "Date": "Date"},
 )
 
-fig.update_layout(
-    xaxis_title="Date",
-    yaxis_title="Close Price (USD)",
-)
-
 # Show plot
 st.plotly_chart(fig, use_container_width=True)
 
 
 # ----------------------------
-# Portfolio Construction
+# Portfolio Builder
 st.header(":bar_chart: Portfolio Builder", divider="gray")
 st.write("Select tickers, assign weights, and visualize your portfolio performance.")
 
+# Select component
 st.subheader("Select Tickers")
 selected_tickers = st.multiselect(
     "Choose the tickers you want in your portfolio:",
@@ -249,28 +245,8 @@ if selected_tickers:
 
     # ----------------------------
     # Compute Metrics
-
-    def compute_holding_metrics(nav_df: pd.DataFrame) -> dict:
-        """
-        Compute holding metrics for the portfolio DataFrame.
-        Returns a dictionary with start date, end date, holding period, and annualized return.
-        """
-        start_date = nav_df.index.min().date()
-        end_date = nav_df.index.max().date()
-        holding_days = (end_date - start_date).days
-        holding_years = holding_days / 365.25
-
-        holding_metrics = {
-            "Start Date" : f"{start_date}",
-            "End Date" : f"{end_date}",
-            "Holding Period (days)" :f"{holding_days} days",
-            "Holding Period (years)" : f"~{holding_years:.2f} years"
-        }
-
-        return holding_metrics
     
-    
-    def compute_return_metrics(nav_df: pd.DataFrame) -> dict:
+    def compute_metrics(nav_df: pd.DataFrame) -> dict:
         
         # Comupute returns
         returns_daily = nav_df.pct_change().dropna()
@@ -283,11 +259,6 @@ if selected_tickers:
         # Annualized volatility
         annual_volatility = returns_daily.std() * np.sqrt(252)
 
-        # Maximum Drawdown TODO: check if this is correct
-        cumulative_max = nav_df.cummax()
-        drawdown = (nav_df / cumulative_max) - 1.0
-        max_drawdown = drawdown.min()
-
         # Sharpe Ratio (risk-free rate = 0%)
         sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else np.nan
 
@@ -296,7 +267,6 @@ if selected_tickers:
             "Cumulative Return" : f"{cumulative_return:.2f}x",
             "CAGR" :  f"{annual_return * 100:.2f}%",  # Compound Annual Growth Rate
             "Annualized Volatility" :  f"{annual_volatility * 100:.2f}%",
-            "Maximum Drawdown": f"{max_drawdown * 100:.2f}%",
             "Sharpe Ratio" : f"{sharpe_ratio:.2f}"
         }           
                          
@@ -305,18 +275,26 @@ if selected_tickers:
 
     # ----------------------------
     # Display Portfolio Stats
-
-
+    
     st.subheader("Holding Metrics")
-    holding_metrics = pd.DataFrame([compute_holding_metrics(nav_df)], index=['Value']).T
-    st.table(holding_metrics)
+
+    # compute variables
+    start_date = nav_df.index.min().date()
+    end_date = nav_df.index.max().date()
+    holding_days = (end_date - start_date).days
+    holding_years = holding_days / 365.25 
+
+    # print out variables
+    st.write(f"**Start Date:** {start_date}")
+    st.write(f"**End Date:** {end_date}")
+    st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
 
 
     st.subheader("Risk and Return Metrics")
 
     # compute metrics for portfolio and SPY
-    portfolio_return_metrics = compute_return_metrics(nav_df["Portfolio"])
-    spy_return_metrics = compute_return_metrics(nav_df["SPY"])
+    portfolio_return_metrics = compute_metrics(nav_df["Portfolio"])
+    spy_return_metrics = compute_metrics(nav_df["SPY"])
 
     metrics_df = pd.DataFrame([portfolio_return_metrics, spy_return_metrics], index=['Portfolio', 'SPY Benchmark'])
     st.table(metrics_df.T)

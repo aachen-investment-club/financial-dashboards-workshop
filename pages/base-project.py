@@ -11,8 +11,6 @@ from dataloader import load_data
 
 # ----------------------------
 # Page Setup
-st.set_page_config(page_title="Base Project", layout="wide")
-st.title("Base Project")
 
 
 # ----------------------------
@@ -33,7 +31,7 @@ st.title("Base Project")
 
 
     # ----------------------------
-    # Pie Chart of Allocations
+    # Pie Charts of Allocations
 
         
     # ----------------------------
@@ -48,10 +46,6 @@ st.title("Base Project")
     # Plot NAV of Portfolio vs SPY
 
     
-    # ----------------------------
-    # Compute Metrics
-
-
     # ----------------------------
     # Display Portfolio Metrics
 
