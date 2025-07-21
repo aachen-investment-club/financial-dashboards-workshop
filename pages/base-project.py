@@ -254,10 +254,21 @@ if selected_tickers:
     st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
 
     def compute_metrics(nav_df: pd.DataFrame) -> dict:
-        
-        # Comupute metrics
+                
+       # Comupute returns
         returns_daily = nav_df.pct_change().dropna()
-        
+        cumulative_return = nav_df.iloc[-1] - 1.0
+
+        # Annualized return (CAGR)
+        years = (nav_df.index[-1] - nav_df.index[0]).days / 365.25
+        annual_return = (nav_df.iloc[-1]) ** (1 / years) - 1
+
+        # Annualized volatility
+        annual_volatility = returns_daily.std() * np.sqrt(252)
+
+        # Sharpe Ratio (risk-free rate = 0%)
+        sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else np.nan
+
         # Prepare metrics in dict format
         return_metrics = {
             "Cumulative Return" : f"{cumulative_return:.2f}x",
