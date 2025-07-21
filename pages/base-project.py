@@ -4,6 +4,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))    
 
 # own imports
 from dataloader import load_data
@@ -265,17 +269,17 @@ if selected_tickers:
         returns_daily = nav_df.pct_change().dropna()
         
         # Cumulative return (final value / initial value) - extract scalar value
-        cumulative_return = (nav_df.iloc[-1] / nav_df.iloc[0]).iloc[0]
+        cumulative_return = (nav_df.iloc[-1] - nav_df.iloc[0] / nav_df.iloc[0]).iloc[0]
         
         # Annualized return (CAGR)
         holding_years = len(nav_df) / 252  # Assuming 252 trading days per year
-        annual_return = (cumulative_return) ** (1 / holding_years) - 1
+        annual_return = (cumulative_return) * (1 / holding_years)
         
         # Annualized volatility (standard deviation of daily returns * sqrt(252)) - extract scalar value
-        annual_volatility = (returns_daily.std() * np.sqrt(252)).iloc[0]
+        annual_volatility = (returns_daily.std().iloc[0] * np.sqrt(252))
         
         # Sharpe ratio (assuming risk-free rate of 0 for simplicity)
-        sharpe_ratio = annual_return / annual_volatility if annual_volatility > 0 else 0
+        sharpe_ratio = annual_return / annual_volatility 
     
         # Prepare metrics in dict format
         return_metrics = {
