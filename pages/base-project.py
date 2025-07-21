@@ -44,8 +44,7 @@ if not ticker_meta.empty:
         **Exchange Name:** {ticker_meta.loc['Exchange Name']}  
         """
     )
-else:
-    st.warning("No meta information available for this ticker.")
+
 
 # Filter close price data for selected ticker
 df_selected = df[[selected_ticker]].copy().dropna()
@@ -144,9 +143,6 @@ if selected_tickers:
         st.plotly_chart(fig_industry, use_container_width=True)
 
     # ---------------------------------------------------- #
-    
-else:
-    st.info("Please select at least one ticker to begin building your portfolio.")
 
 
     # ----------------------------
@@ -259,8 +255,8 @@ else:
     st.subheader("Holding Period")
 
     # compute variables
-    start_date = portfolio_df.index.min().date()
-    end_date = portfolio_df.index.max().date()
+    start_date = nav_df.index.min().date()
+    end_date = nav_df.index.max().date()
     holding_days = (end_date - start_date).days
     holding_years = holding_days / 365.25 
 
@@ -268,3 +264,12 @@ else:
     st.write(f"**Start Date:** {start_date}")
     st.write(f"**End Date:** {end_date}")
     st.write(f"**Holding Period:** {holding_days} days (~{holding_years:.2f} years)")
+
+
+
+
+else:
+    st.info("Please select at least one ticker to begin building your portfolio.")
+
+
+
