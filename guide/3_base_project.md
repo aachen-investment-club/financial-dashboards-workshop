@@ -333,8 +333,8 @@ Let's start simple and look at our holding period.
     st.subheader("Holding Period")
 
     # compute variables
-    start_date = portfolio_df.index.min().date()
-    end_date = portfolio_df.index.max().date()
+    start_date = nav_df.index.min().date()
+    end_date = nav_df.index.max().date()
     holding_days = (end_date - start_date).days
     holding_years = holding_days / 365.25 
 
