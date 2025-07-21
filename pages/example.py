@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 
-NAME= "value2"
+NAME= "Sebastian Hacker"
 
 st.set_page_config(page_title=NAME)
 
