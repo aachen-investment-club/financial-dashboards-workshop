@@ -656,6 +656,272 @@ if selected_tickers:
             st.dataframe(rebalance_df, use_container_width=True)
 
     # ----------------------------
+    # Volatility Targeting Strategy
+    st.subheader("🎯 Volatility Targeting")
+    
+    volatility_targeting_enabled = st.checkbox(
+        "Enable Volatility Targeting", 
+        value=False, 
+        help="Dynamically adjust portfolio exposure to maintain a target volatility level"
+    )
+    
+    if volatility_targeting_enabled:
+        st.info("""
+        **How Volatility Targeting Works:**
+        - Portfolio exposure is scaled up/down based on realized volatility vs. target
+        - When volatility is low → increase exposure (take more risk)
+        - When volatility is high → decrease exposure (reduce risk)  
+        - This creates a counter-cyclical risk management approach
+        """)
+        
+        # Target volatility input
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            target_volatility = st.slider(
+                "Target Volatility (%)", 
+                min_value=5.0, 
+                max_value=25.0, 
+                value=12.0, 
+                step=0.5,
+                help="Annual target volatility for the portfolio"
+            )
+        
+        with col2:
+            volatility_lookback = st.slider(
+                "Volatility Lookback (days)", 
+                min_value=10, 
+                max_value=60, 
+                value=22, 
+                step=1,
+                help="Rolling window for volatility calculation"
+            )
+        
+        with col3:
+            max_leverage = st.slider(
+                "Max Leverage", 
+                min_value=0.5, 
+                max_value=2.0, 
+                value=1.5, 
+                step=0.1,
+                help="Maximum portfolio exposure (>1.0 allows leverage)"
+            )
+        
+        def calculate_volatility_targeted_nav(nav_series, target_vol, vol_window, max_lev):
+            """Calculate NAV with volatility targeting"""
+            returns = nav_series.pct_change().dropna()
+            
+            # Calculate rolling volatility (annualized)
+            rolling_vol = returns.rolling(window=vol_window).std() * np.sqrt(252) * 100
+            
+            # Calculate scaling factor (target vol / realized vol)
+            scaling_factor = target_vol / rolling_vol
+            
+            # Apply leverage constraints
+            scaling_factor = np.clip(scaling_factor, 0.1, max_lev)
+            
+            # Calculate volatility-targeted returns
+            vol_targeted_returns = returns * scaling_factor.shift(1)  # Use previous day's scaling
+            
+            # Calculate NAV (starting at 1.0)
+            vol_targeted_nav = (1 + vol_targeted_returns).cumprod()
+            vol_targeted_nav.iloc[0] = 1.0  # Ensure it starts at 1.0
+            
+            return vol_targeted_nav, rolling_vol, scaling_factor
+        
+        # Calculate volatility targeted portfolio
+        vol_targeted_nav, rolling_volatility, scaling_factors = calculate_volatility_targeted_nav(
+            nav_df["Portfolio"], target_volatility, volatility_lookback, max_leverage
+        )
+        
+        # Create comprehensive comparison
+        vol_comparison_df = nav_df[["Portfolio", "SPY"]].copy()
+        vol_comparison_df["Portfolio (Vol Targeted)"] = vol_targeted_nav
+        
+        # Volatility targeting visualization
+        fig_vol_target = make_subplots(
+            rows=3, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.05,
+            row_heights=[0.5, 0.25, 0.25],
+            subplot_titles=(
+                "Portfolio Performance Comparison",
+                "Rolling Portfolio Volatility (%)",
+                "Volatility Scaling Factor"
+            )
+        )
+        
+        # Performance comparison
+        fig_vol_target.add_trace(go.Scatter(
+            x=vol_comparison_df.index,
+            y=vol_comparison_df["Portfolio"],
+            mode='lines',
+            name='Original Portfolio',
+            line=dict(color='blue', width=2)
+        ), row=1, col=1)
+        
+        fig_vol_target.add_trace(go.Scatter(
+            x=vol_comparison_df.index,
+            y=vol_comparison_df["Portfolio (Vol Targeted)"],
+            mode='lines',
+            name='Vol Targeted Portfolio',
+            line=dict(color='green', width=2)
+        ), row=1, col=1)
+        
+        fig_vol_target.add_trace(go.Scatter(
+            x=vol_comparison_df.index,
+            y=vol_comparison_df["SPY"],
+            mode='lines',
+            name='SPY Benchmark',
+            line=dict(color='gray', width=1, dash='dash')
+        ), row=1, col=1)
+        
+        # Rolling volatility with target line
+        fig_vol_target.add_trace(go.Scatter(
+            x=rolling_volatility.index,
+            y=rolling_volatility,
+            mode='lines',
+            name='Realized Volatility',
+            line=dict(color='red', width=1.5),
+            showlegend=False
+        ), row=2, col=1)
+        
+        # Add target volatility line
+        fig_vol_target.add_hline(
+            y=target_volatility, 
+            line_dash="solid", 
+            line_color="orange", 
+            opacity=0.8,
+            row=2, col=1
+        )
+        
+        # Scaling factor
+        fig_vol_target.add_trace(go.Scatter(
+            x=scaling_factors.index,
+            y=scaling_factors,
+            mode='lines',
+            name='Scaling Factor',
+            line=dict(color='purple', width=1.5),
+            fill='tonexty',
+            showlegend=False
+        ), row=3, col=1)
+        
+        # Add 1.0 reference line for scaling
+        fig_vol_target.add_hline(
+            y=1.0, 
+            line_dash="solid", 
+            line_color="gray", 
+            opacity=0.5,
+            row=3, col=1
+        )
+        
+        fig_vol_target.update_layout(
+            height=800,
+            title_text=f"Volatility Targeting Analysis (Target: {target_volatility}%)",
+            showlegend=True
+        )
+        
+        fig_vol_target.update_xaxes(title_text="Date", row=3, col=1)
+        fig_vol_target.update_yaxes(title_text="Portfolio Value", row=1, col=1)
+        fig_vol_target.update_yaxes(title_text="Volatility %", row=2, col=1)
+        fig_vol_target.update_yaxes(title_text="Scaling Factor", row=3, col=1)
+        
+        st.plotly_chart(fig_vol_target, use_container_width=True)
+        
+        # Volatility targeting metrics
+        st.subheader("Volatility Targeting Results")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            original_final = vol_comparison_df["Portfolio"].iloc[-1]
+            st.metric(
+                "Original Portfolio", 
+                f"{original_final:.3f}x",
+                f"{(original_final - 1) * 100:.2f}%"
+            )
+        
+        with col2:
+            vol_targeted_final = vol_comparison_df["Portfolio (Vol Targeted)"].iloc[-1]
+            st.metric(
+                "Vol Targeted Portfolio", 
+                f"{vol_targeted_final:.3f}x",
+                f"{(vol_targeted_final - 1) * 100:.2f}%"
+            )
+        
+        with col3:
+            vol_impact = vol_targeted_final - original_final
+            st.metric(
+                "Vol Targeting Impact", 
+                f"{vol_impact:+.3f}x",
+                f"{vol_impact * 100:+.2f}%"
+            )
+        
+        with col4:
+            avg_realized_vol = rolling_volatility.mean()
+            st.metric(
+                "Avg Realized Vol", 
+                f"{avg_realized_vol:.1f}%",
+                f"{avg_realized_vol - target_volatility:+.1f}% vs target"
+            )
+        
+        # Detailed volatility statistics
+        with st.expander("📊 Detailed Volatility Statistics"):
+            vol_stats_df = pd.DataFrame({
+                'Metric': [
+                    'Target Volatility',
+                    'Average Realized Volatility',
+                    'Volatility Standard Deviation',
+                    'Time Above Target (%)',
+                    'Time Below Target (%)',
+                    'Average Scaling Factor',
+                    'Max Scaling Factor',
+                    'Min Scaling Factor'
+                ],
+                'Value': [
+                    f"{target_volatility:.1f}%",
+                    f"{rolling_volatility.mean():.1f}%",
+                    f"{rolling_volatility.std():.1f}%",
+                    f"{(rolling_volatility > target_volatility).mean() * 100:.1f}%",
+                    f"{(rolling_volatility < target_volatility).mean() * 100:.1f}%",
+                    f"{scaling_factors.mean():.2f}x",
+                    f"{scaling_factors.max():.2f}x",
+                    f"{scaling_factors.min():.2f}x"
+                ]
+            })
+            st.table(vol_stats_df)
+        
+        # Strategy explanation
+        with st.expander("📖 Understanding Volatility Targeting"):
+            st.markdown(f"""
+            **Strategy Mechanics:**
+            
+            🎯 **Target Volatility**: {target_volatility}% annually
+            - Portfolio exposure is scaled to maintain this volatility level
+            - Scaling Factor = Target Vol / Realized Vol
+            
+            📈 **Risk Scaling:**
+            - **High volatility periods**: Reduce exposure (scaling < 1.0)
+            - **Low volatility periods**: Increase exposure (scaling > 1.0)  
+            - **Max leverage limit**: {max_leverage}x to control risk
+            
+            ⚖️ **Benefits:**
+            - **Smoother returns**: More consistent risk profile over time
+            - **Counter-cyclical**: Natural buy-low-sell-high behavior
+            - **Risk management**: Automatic position sizing based on market conditions
+            
+            ⚠️ **Considerations:**
+            - May underperform in strong trending markets
+            - Transaction costs not included in this simulation
+            - Leverage >1.0 requires margin/derivatives access
+            
+            **Interpretation:**
+            - Green line above blue = Vol targeting outperformed
+            - Scaling factor >1.0 = Taking more risk (leveraging up)
+            - Scaling factor <1.0 = Reducing risk (scaling down)
+            """)
+
+    # ----------------------------
     # Compute Metrics
     
     def compute_metrics(nav_df: pd.DataFrame) -> dict:
