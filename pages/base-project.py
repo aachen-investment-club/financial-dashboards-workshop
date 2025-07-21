@@ -53,27 +53,43 @@ meta_df = load_data(name='sp500_meta')
 st.header(":chart_with_upwards_trend: Stock Comparison", divider="gray")
 st.write("Select one or more stock tickers to compare their price history.")
 
-# Initialize ticker count
-if "ticker_count" not in st.session_state:
-    st.session_state.ticker_count = 1
+# Initialize stock list in session state
+if "stock_list" not in st.session_state:
+    st.session_state.stock_list = [0]  # Start with one stock (ID 0)
+if "next_stock_id" not in st.session_state:
+    st.session_state.next_stock_id = 1
 
-# Display dynamic selectboxes
 all_tickers = df.columns.tolist()
 selected_tickers = []
 
-for i in range(st.session_state.ticker_count):
-    ticker = st.selectbox(
-        f"Stock {i + 1}",
-        all_tickers,
-        index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers and i == 0 else 0,
-        key=f"stock_select_{i}",
-    )
-    if ticker not in selected_tickers:
-        selected_tickers.append(ticker)
+# Display each stock with remove button
+for stock_id in st.session_state.stock_list:
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        ticker = st.selectbox(
+            f"Stock {stock_id + 1}",
+            all_tickers,
+            index=all_tickers.index("AAPL.OQ") if "AAPL.OQ" in all_tickers and stock_id == 0 else 0,
+            key=f"stock_select_{stock_id}",
+        )
+        if ticker not in selected_tickers:
+            selected_tickers.append(ticker)
+    
+    with col2:
+        # Add vertical spacing to align button with selectbox
+        st.markdown("<br>", unsafe_allow_html=True)
+        # Only show remove button if there's more than one stock
+        if len(st.session_state.stock_list) > 1:
+            if st.button("🗑️", key=f"remove_{stock_id}", help="Remove this stock"):
+                st.session_state.stock_list.remove(stock_id)
+                st.rerun()
 
 # Button to add another stock
 if st.button("➕ Add another stock"):
-    st.session_state.ticker_count += 1
+    st.session_state.stock_list.append(st.session_state.next_stock_id)
+    st.session_state.next_stock_id += 1
+    st.rerun()
 
 # Show Meta Information for all selected tickers
 st.subheader("Company Information")
@@ -297,7 +313,157 @@ if selected_tickers:
 
     st.plotly_chart(fig, use_container_width=True)
 
-
+    # ----------------------------
+    # Monthly Rebalancing Analysis
+    st.subheader("📊 Buy & Hold vs Monthly Rebalancing")
+    
+    rebalancing_enabled = st.checkbox(
+        "Enable Monthly Rebalancing Analysis", 
+        value=False, 
+        help="Compare your Buy & Hold strategy with monthly rebalancing to target weights"
+    )
+    
+    if rebalancing_enabled:
+        st.info("""
+        **How Monthly Rebalancing Works:**
+        - Every month, the portfolio is rebalanced back to your target allocation
+        - This means selling winners and buying losers to maintain desired weights
+        - Rebalancing can reduce volatility but may also limit upside in trending markets
+        """)
+        
+        def calculate_monthly_rebalanced_nav(df_prices, weights, cash_weight, start_date, end_date):
+            """Calculate NAV with monthly rebalancing"""
+            df_selected = df_prices[selected_tickers].copy()
+            df_selected = df_selected.loc[start_date:end_date].dropna()
+            
+            # Get monthly rebalancing dates (first day of each month)
+            rebalance_dates = pd.date_range(start=df_selected.index[0], end=df_selected.index[-1], freq='MS')
+            rebalance_dates = [date for date in rebalance_dates if date in df_selected.index]
+            
+            nav_rebalanced = []
+            current_nav = 1.0  # Start with $1
+            
+            for i, date in enumerate(df_selected.index):
+                if i == 0:
+                    # Initialize portfolio
+                    nav_rebalanced.append(current_nav)
+                    continue
+                
+                prev_date = df_selected.index[i-1]
+                
+                # Calculate daily return for each stock
+                daily_returns = df_selected.loc[date] / df_selected.loc[prev_date] - 1
+                
+                # If it's a rebalancing date, reset to target weights
+                if date in rebalance_dates:
+                    # Portfolio return since last rebalancing
+                    portfolio_return = sum(daily_returns[ticker] * (weights[ticker] / 100.0) for ticker in selected_tickers)
+                    current_nav = current_nav * (1 + portfolio_return)
+                    # Reset to target allocation (rebalancing happens)
+                else:
+                    # Regular day - portfolio drifts with individual stock performance
+                    portfolio_return = sum(daily_returns[ticker] * (weights[ticker] / 100.0) for ticker in selected_tickers)
+                    current_nav = current_nav * (1 + portfolio_return)
+                
+                nav_rebalanced.append(current_nav)
+            
+            return pd.Series(nav_rebalanced, index=df_selected.index), rebalance_dates
+        
+        # Calculate rebalanced portfolio
+        rebalanced_nav, rebalance_dates = calculate_monthly_rebalanced_nav(df, weights, cash_weight, start_date, end_date)
+        
+        # Create comparison dataframe
+        comparison_df = nav_df[["Portfolio", "SPY"]].copy()
+        comparison_df["Portfolio (Rebalanced)"] = rebalanced_nav
+        
+        # Comparison chart
+        fig_comparison = go.Figure()
+        
+        # Add Buy & Hold
+        fig_comparison.add_trace(go.Scatter(
+            x=comparison_df.index,
+            y=comparison_df["Portfolio"],
+            mode='lines',
+            name='Buy & Hold',
+            line=dict(color='blue')
+        ))
+        
+        # Add Rebalanced
+        fig_comparison.add_trace(go.Scatter(
+            x=comparison_df.index,
+            y=comparison_df["Portfolio (Rebalanced)"],
+            mode='lines',
+            name='Monthly Rebalanced',
+            line=dict(color='orange')
+        ))
+        
+        # Add SPY for reference
+        fig_comparison.add_trace(go.Scatter(
+            x=comparison_df.index,
+            y=comparison_df["SPY"],
+            mode='lines',
+            name='SPY Benchmark',
+            line=dict(color='gray', dash='dash')
+        ))
+        
+        # Add rebalancing markers
+        rebalance_values = [comparison_df.loc[date, "Portfolio (Rebalanced)"] for date in rebalance_dates if date in comparison_df.index]
+        fig_comparison.add_trace(go.Scatter(
+            x=[date for date in rebalance_dates if date in comparison_df.index],
+            y=rebalance_values,
+            mode='markers',
+            name='Rebalancing Dates',
+            marker=dict(color='red', size=8, symbol='diamond'),
+            hovertemplate='Rebalanced on %{x}<extra></extra>'
+        ))
+        
+        fig_comparison.update_layout(
+            title="Portfolio Strategies Comparison (Normalized to 1.0)",
+            xaxis_title="Date",
+            yaxis_title="Portfolio Value",
+            height=600,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig_comparison, use_container_width=True)
+        
+        # Rebalancing summary
+        st.subheader("Rebalancing Summary")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            final_buyhold = comparison_df["Portfolio"].iloc[-1]
+            st.metric(
+                "Buy & Hold Final Value", 
+                f"{final_buyhold:.3f}x",
+                f"{(final_buyhold - 1) * 100:.2f}%"
+            )
+        
+        with col2:
+            final_rebalanced = comparison_df["Portfolio (Rebalanced)"].iloc[-1]
+            st.metric(
+                "Rebalanced Final Value", 
+                f"{final_rebalanced:.3f}x",
+                f"{(final_rebalanced - 1) * 100:.2f}%"
+            )
+        
+        with col3:
+            difference = final_rebalanced - final_buyhold
+            st.metric(
+                "Rebalancing Impact", 
+                f"{difference:+.3f}x",
+                f"{difference * 100:+.2f}%"
+            )
+        
+        # Show rebalancing dates
+        with st.expander(f"📅 Rebalancing Dates ({len(rebalance_dates)} total)"):
+            st.write("The portfolio was rebalanced on the following dates:")
+            rebalance_df = pd.DataFrame({
+                'Rebalancing Date': [date.strftime('%Y-%m-%d') for date in rebalance_dates if date in comparison_df.index],
+                'Portfolio Value': [f"{comparison_df.loc[date, 'Portfolio (Rebalanced)']:.3f}x" for date in rebalance_dates if date in comparison_df.index]
+            })
+            st.dataframe(rebalance_df, use_container_width=True)
 
     # ----------------------------
     # Compute Metrics
