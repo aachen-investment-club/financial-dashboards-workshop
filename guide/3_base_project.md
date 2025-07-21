@@ -122,6 +122,10 @@ selected_tickers = st.multiselect(
 Next, we create a component to select the weights that you will assign to each stock.
 
 ```py
+
+weights = {}
+total_weight = 0.0
+
 if selected_tickers:
     st.subheader("Set Allocations")
     cols = st.columns(len(selected_tickers))
