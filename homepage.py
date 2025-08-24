@@ -16,7 +16,7 @@ st.write("""
         We will merge your dashboards into this website. 
         """)
 
-base_project_url = "/base-project-demo"
+base_project_url = "/base-project"
 repo_url = "https://github.com/aachen-investment-club/financial-dashboards-workshop"
 aic_url = "https://www.aachen-investment-club.de/"
 
