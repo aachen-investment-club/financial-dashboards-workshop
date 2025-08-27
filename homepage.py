@@ -1,32 +1,40 @@
 import streamlit as st
 from dataloader import load_data
 
-st.set_page_config(
-    page_title="Financial Dashboards Workshop",
-    page_icon="📊",
-    layout="wide",
+
+# --- Page Config ---
+st.set_page_config(page_title="AIC - Financial Dashboards", page_icon="📊", layout="wide")
+
+# --- Title & Intro ---
+st.title("📊 AIC - Financial Dashboards")
+st.markdown(
+    """
+    Welcome to **Aachen Investment Club's Financial Dashboards**! 
+    This platform showcases the results of our **Financial Dashboards Workshop**.  
+
+    Here, we bring together the creativity and insights of our members by merging their dashboards into one hub.  
+    """
 )
 
-st.title("AIC - Financial Dashboards")
-st.write("""
-        Welcome to AIC's financial dashboads!
+st.divider()
 
-        In this website, we contain the results of the financial dashboards workshop.     
-         
-        We will merge your dashboards into this website. 
-        """)
+# --- Highlight Boxes ---
+col1, col2, col3 = st.columns(3)
 
-base_project_url = "/base-project"
-repo_url = "https://github.com/aachen-investment-club/financial-dashboards-workshop"
-aic_url = "https://www.aachen-investment-club.de/"
+with col1:
+    st.success("✅ Explore the **Base Project**")
+    st.markdown("[Open Base Project](/base-project)")
 
+with col2:
+    st.info("💻 Contribute on **GitHub**")
+    st.markdown("[View our Repository](https://github.com/aachen-investment-club/financial-dashboards-workshop)")
 
-st.markdown(f"Checkout the base project: [base project](%s)" % base_project_url)
+with col3:
+    st.warning("🌍 Learn more about **AIC**")
+    st.markdown("[Visit our Website](https://www.aachen-investment-club.de/)")
 
-st.markdown(f"Checkout the GitHub repository: [repo](%s)" % repo_url)
+st.divider()
 
-
-st.markdown(f"Checkout our Website: [our website](%s)" % aic_url)
 
 
 # preload datasets in cache
